@@ -47,6 +47,12 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
+  let parsedContent = value;
+  if (typeof value === 'string' && value.startsWith('{')) {
+    try { parsedContent = JSON.parse(value); } 
+    catch (e) { console.error("Tiptap Parse Error"); }
+  }
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -97,9 +103,9 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
         transformPastedText: true,
       }),
     ],
-    content: value,
+    content: parsedContent,
     onUpdate: ({ editor }) => {
-      onChange(editor.getJSON())
+      onChange(JSON.stringify(editor.getJSON()))
     },
     editorProps: {
       attributes: {
@@ -164,6 +170,21 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
       },
     },
   })
+
+  useEffect(() => {
+    if (editor && value) {
+      let parsed = value;
+      if (typeof value === 'string' && value.startsWith('{')) {
+        try { parsed = JSON.parse(value); } 
+        catch (e) { console.error("Tiptap Parse Error"); }
+      }
+      
+      // Only set content if editor is empty, typical during hydration of edit form
+      if (editor.isEmpty) {
+        editor.commands.setContent(parsed);
+      }
+    }
+  }, [editor, value])
 
   if (!mounted || !editor) {
     return null

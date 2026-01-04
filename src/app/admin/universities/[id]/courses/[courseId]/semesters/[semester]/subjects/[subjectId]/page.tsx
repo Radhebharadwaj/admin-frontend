@@ -257,6 +257,12 @@ export default function SubjectDetailsPage() {
   const openResourceEdit = (r: Resource) => {
     setFormType("resource");
     setEditingId(r.id);
+    
+    // Determine content type dynamically to switch tabs
+    let inferredContentType = r.content_type || "external_url";
+    if (r.rich_text_content) inferredContentType = "internal_module";
+    else if (r.r2_object_key) inferredContentType = "r2_upload";
+
     setFormData({
       ...r,
       price_in_paise: String(r.price_in_paise || 0),
@@ -265,7 +271,7 @@ export default function SubjectDetailsPage() {
       valid_from: r.valid_from ? new Date(r.valid_from).toISOString().slice(0, 16) : "",
       free_after_date: r.free_after_date ? new Date(r.free_after_date).toISOString().slice(0, 16) : "",
       submission_deadline: r.submission_deadline ? new Date(r.submission_deadline).toISOString().slice(0, 16) : "",
-      content_type: r.content_type || "external_url",
+      content_type: inferredContentType,
       r2_object_key: r.r2_object_key || "",
       rich_text_content: r.rich_text_content || "",
     });
