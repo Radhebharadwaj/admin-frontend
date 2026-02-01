@@ -41,6 +41,37 @@ interface University {
   is_active: number;
 }
 
+function UniversityLogo({ src, name }: { src: string | null; name: string }) {
+  const [error, setError] = useState(false);
+
+  // Normalize legacy relative paths from the DB
+  let finalSrc = src;
+  if (finalSrc && !finalSrc.startsWith("http") && !finalSrc.startsWith("/")) {
+    // Fallback public URL if DB only stored the key
+    finalSrc = `https://pub-quduhub-r2.dev/${finalSrc}`;
+  }
+
+  if (error || !finalSrc) {
+    return (
+      <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+        <GraduationCap className="w-4 h-4" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-zinc-700 shrink-0 bg-zinc-900/50">
+      {/* Using standard img for reliable onError handling with external unoptimized URLs */}
+      <img
+        src={finalSrc}
+        alt={name}
+        className="w-full h-full object-cover"
+        onError={() => setError(true)}
+      />
+    </div>
+  );
+}
+
 export default function UniversitiesPage() {
   const router = useRouter();
   const { user, addToast } = useAuthStore();
@@ -261,21 +292,7 @@ export default function UniversitiesPage() {
             >
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  {u.logo_url ? (
-                    <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-zinc-700 shrink-0">
-                      <Image
-                        src={u.logo_url}
-                        alt={u.name}
-                        fill
-                        sizes="36px"
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                  )}
+                  <UniversityLogo src={u.logo_url} name={u.name} />
                   <div>
                     <Link href={`/admin/universities/${u.id}/courses`} className="font-semibold text-white text-sm hover:text-indigo-400 transition-colors" onClick={(e) => e.stopPropagation()}>
                       {u.name}
