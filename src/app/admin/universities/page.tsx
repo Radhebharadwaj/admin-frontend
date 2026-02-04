@@ -131,9 +131,16 @@ export default function UniversitiesPage() {
           filePrefix: 'logo'
         });
         if (!uploadedUrl) {
-          throw new Error("Failed to upload image. Please try again.");
+          addToast("error", "Failed to upload image to bucket");
+          setFormLoading(false);
+          return;
         }
         finalLogoUrl = uploadedUrl;
+      }
+
+      // Prevent local blob URLs from being sent to the backend
+      if (finalLogoUrl && finalLogoUrl.startsWith("blob:")) {
+        finalLogoUrl = null;
       }
 
       const url = editingId ? `/api/universities/${editingId}` : "/api/universities";

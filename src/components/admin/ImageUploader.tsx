@@ -47,12 +47,27 @@ export default function ImageUploader({
         setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.`);
         return;
       }
+      let mimeType = file.type;
+      const isSvg = file.name.toLowerCase().endsWith(".svg");
+
+      if (isSvg) {
+        mimeType = "image/svg+xml";
+      }
+
+      const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+      
+      if (!allowedTypes.has(mimeType)) {
+        setError(`Unsupported file type. Use JPG, PNG, WebP, or SVG.`);
+        return;
+      }
 
       if (preview && preview.startsWith('blob:')) {
         URL.revokeObjectURL(preview);
       }
       
-      const objectUrl = URL.createObjectURL(file);
+      // Force correct MIME type for SVG previews to prevent broken images
+      const previewFile = isSvg ? new File([file], file.name, { type: mimeType }) : file;
+      const objectUrl = URL.createObjectURL(previewFile);
       setPreview(objectUrl);
       onChange(file);
     },
