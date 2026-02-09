@@ -11,8 +11,17 @@ interface UploadState {
   error: string | null;
 }
 
+export interface UploadOptions {
+  uploadType: 'image' | 'document';
+  entityType: 'universities' | 'courses' | 'subjects';
+  universitySlug: string;
+  courseSlug?: string;
+  subjectCode?: string;
+  filePrefix?: string;
+}
+
 interface UseUploadReturn extends UploadState {
-  upload: (file: File, folder?: string) => Promise<string | null>;
+  upload: (file: File, options: UploadOptions) => Promise<string | null>;
   reset: () => void;
 }
 
@@ -21,7 +30,7 @@ interface UseUploadReturn extends UploadState {
  * 
  * Usage:
  *   const { upload, uploading, error } = useUpload();
- *   const url = await upload(file, 'logos');
+ *   const url = await upload(file, { uploadType: 'image', entityType: 'universities', universitySlug: 'ignou', filePrefix: 'logo' });
  */
 export function useUpload(): UseUploadReturn {
   const [state, setState] = useState<UploadState>({
@@ -30,20 +39,23 @@ export function useUpload(): UseUploadReturn {
     error: null,
   });
 
-  const upload = async (file: File, folder: string = "uploads"): Promise<string | null> => {
+  const upload = async (file: File, options: UploadOptions): Promise<string | null> => {
     setState({ uploading: true, progress: 10, error: null });
 
     // Client-side validation
-    const maxSize = 1 * 1024 * 1024; // 1MB
-    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
+    const isImage = options.uploadType === 'image';
+    const maxSize = isImage ? 1 * 1024 * 1024 : 20 * 1024 * 1024; // 1MB for image, 20MB for document
+    const allowedTypes = isImage
+      ? new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"])
+      : new Set(["application/pdf"]);
 
     if (file.size > maxSize) {
-      setState({ uploading: false, progress: 0, error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.` });
+      setState({ uploading: false, progress: 0, error: `File too large. Max ${isImage ? '1MB' : '20MB'}.` });
       return null;
     }
 
     if (!allowedTypes.has(file.type)) {
-      setState({ uploading: false, progress: 0, error: `Unsupported file type "${file.type}". Use JPG, PNG, WebP, or SVG.` });
+      setState({ uploading: false, progress: 0, error: `Unsupported file type. ${isImage ? 'Use JPG, PNG, WebP, or SVG.' : 'Use PDF.'}` });
       return null;
     }
 
@@ -70,14 +82,19 @@ export function useUpload(): UseUploadReturn {
 
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      formData.append("folder", folder);
+      formData.append("uploadType", options.uploadType);
+      formData.append("entityType", options.entityType);
+      formData.append("universitySlug", options.universitySlug);
+      if (options.courseSlug) formData.append("courseSlug", options.courseSlug);
+      if (options.subjectCode) formData.append("subjectCode", options.subjectCode);
+      if (options.filePrefix) formData.append("filePrefix", options.filePrefix);
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
       const { sessionToken } = useAuthStore.getState();
 
       const res = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_URL}/api/upload/image`);
+        xhr.open("POST", `${API_URL}/api/upload/media`);
 
         if (sessionToken) {
           xhr.setRequestHeader("Authorization", `Bearer ${sessionToken}`);

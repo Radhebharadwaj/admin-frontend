@@ -18,6 +18,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
+import { useUpload } from "@/lib/useUpload";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
@@ -35,6 +36,7 @@ interface University {
   slug: string;
   website_url: string | null;
   logo_url: string | null;
+  logo_file?: File | null;
   search_aliases?: string;
   is_active: number;
 }
@@ -43,6 +45,7 @@ export default function UniversitiesPage() {
   const router = useRouter();
   const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
+  const { upload, uploading } = useUpload();
 
   // Data
   const { data: universities = [], error: fetchError, isLoading: loading, mutate } = useSWR<University[]>("/api/universities", swrFetcher);
@@ -117,18 +120,35 @@ export default function UniversitiesPage() {
     setFormLoading(true);
     setError("");
     
-    const url = editingId ? `/api/universities/${editingId}` : "/api/universities";
-    const optimisticData = editingId
-      ? universities.map((u) => (u.id === editingId ? { ...u, ...formData } : u))
-      : [{ ...formData, id: `temp-${Date.now()}` }, ...universities];
-
     try {
+      let finalLogoUrl = formData.logo_url;
+      if (formData.logo_file) {
+        const targetSlug = formData.slug || autoSlug(formData.name || "");
+        const uploadedUrl = await upload(formData.logo_file, {
+          uploadType: 'image',
+          entityType: 'universities',
+          universitySlug: targetSlug,
+          filePrefix: 'logo'
+        });
+        if (!uploadedUrl) {
+          throw new Error("Failed to upload image. Please try again.");
+        }
+        finalLogoUrl = uploadedUrl;
+      }
+
+      const url = editingId ? `/api/universities/${editingId}` : "/api/universities";
+      const payload = { ...formData, logo_url: finalLogoUrl };
+      delete payload.logo_file;
+
+      const optimisticData = editingId
+        ? universities.map((u) => (u.id === editingId ? { ...u, ...payload } : u))
+        : [{ ...payload, id: `temp-${Date.now()}` }, ...universities];
       await mutate(
         async () => {
           const res = await fetchApi(url, {
             method: editingId ? "PATCH" : "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
+            body: JSON.stringify(payload),
           });
           if (!res.success) throw new Error(res.message);
           
@@ -328,8 +348,14 @@ export default function UniversitiesPage() {
           {/* Logo Upload */}
           <ImageUploader
             value={formData.logo_url || null}
-            onChange={(url) => setFormData({ ...formData, logo_url: url })}
-            folder="logos"
+            onChange={(val) => {
+              if (val instanceof File) {
+                setFormData({ ...formData, logo_file: val });
+              } else {
+                setFormData({ ...formData, logo_url: val as string | null, logo_file: null });
+              }
+            }}
+            isUploading={uploading}
             label="University Logo"
             placeholder="Drag and drop logo or click to upload"
           />
@@ -429,11 +455,11 @@ export default function UniversitiesPage() {
             </button>
             <button
               type="submit"
-              disabled={formLoading}
-              className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-black hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              disabled={formLoading || uploading}
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {editingId ? "Save Changes" : "Create University"}
+              {(formLoading || uploading) && <Loader2 className="w-4 h-4 animate-spin" />}
+              {uploading ? "Uploading..." : formLoading ? "Saving..." : "Save University"}
             </button>
           </div>
         </form>

@@ -847,10 +847,9 @@ export default function SubjectDetailsPage() {
               {/* Cover Image Upload */}
               <ImageUploader
                 value={formData.thumbnail_url || null}
-                onChange={(url) =>
-                  setFormData({ ...formData, thumbnail_url: url })
+                onChange={(val) =>
+                  setFormData({ ...formData, thumbnail_url: val as string })
                 }
-                folder="covers"
                 label="Cover Image (Thumbnail)"
                 placeholder="Upload a cover image for this resource"
               />

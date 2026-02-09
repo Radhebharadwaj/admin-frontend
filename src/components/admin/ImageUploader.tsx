@@ -1,17 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { UploadCloud, X, Loader2, ImageIcon } from "lucide-react";
 import Image from "next/image";
-import { useUpload } from "@/lib/useUpload";
 
 interface ImageUploaderProps {
   /** Current image URL (for preview when editing) */
   value: string | null;
-  /** Callback when upload completes or image is cleared */
-  onChange: (url: string | null) => void;
-  /** R2 folder to upload into */
-  folder?: string;
+  /** Callback when file is selected or cleared */
+  onChange: (val: File | string | null) => void;
+  /** Is currently uploading from parent */
+  isUploading?: boolean;
   /** Label text */
   label?: string;
   /** Placeholder text */
@@ -21,32 +20,43 @@ interface ImageUploaderProps {
 export default function ImageUploader({
   value,
   onChange,
-  folder = "uploads",
+  isUploading = false,
   label = "Upload Image",
   placeholder = "Drag and drop or click to upload",
 }: ImageUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { upload, uploading, progress, error } = useUpload();
+
+  // Cleanup object URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleFile = useCallback(
-    async (file: File) => {
-      // Show local preview immediately
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-
-      // Upload to R2
-      const url = await upload(file, folder);
-      if (url) {
-        onChange(url);
-      } else {
-        // Upload failed — clear preview
-        setPreview(null);
+    (file: File) => {
+      setError(null);
+      
+      const maxSize = 1 * 1024 * 1024; // 1MB
+      if (file.size > maxSize) {
+        setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.`);
+        return;
       }
+
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+      
+      const objectUrl = URL.createObjectURL(file);
+      setPreview(objectUrl);
+      onChange(file);
     },
-    [upload, folder, onChange]
+    [onChange, preview]
   );
 
   const handleDrop = useCallback(
@@ -74,7 +84,11 @@ export default function ImageUploader({
   };
 
   const handleClear = () => {
+    if (preview && preview.startsWith('blob:')) {
+      URL.revokeObjectURL(preview);
+    }
     setPreview(null);
+    setError(null);
     onChange(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -88,7 +102,7 @@ export default function ImageUploader({
       </label>
 
       {/* Preview State */}
-      {displayUrl && !uploading ? (
+      {displayUrl && !isUploading ? (
         <div className="relative group rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
           <div className="aspect-[16/9] w-full relative flex items-center justify-center bg-zinc-950/50">
             <Image
@@ -120,16 +134,10 @@ export default function ImageUploader({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          {uploading ? (
+          {isUploading ? (
             <div className="flex flex-col items-center gap-3">
               <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <p className="text-sm text-indigo-400 font-medium">Uploading... {progress}%</p>
-              <div className="w-40 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              <p className="text-sm text-indigo-400 font-medium">Uploading...</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
