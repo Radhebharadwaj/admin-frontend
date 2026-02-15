@@ -26,6 +26,7 @@ import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import ImageUploader from "@/components/admin/ImageUploader";
 import SkeletonTable from "@/components/admin/SkeletonTable";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
+import TagInput from "@/components/ui/TagInput";
 
 // ===== TYPES =====
 interface University {
@@ -368,15 +369,13 @@ export default function UniversitiesPage() {
           {/* Search Aliases */}
           <div>
             <label className={labelClass}>Search Aliases (Optional)</label>
-            <input
-              type="text"
-              className={inputClass}
-              value={formData.search_aliases || ""}
-              onChange={(e) => setFormData({ ...formData, search_aliases: e.target.value })}
+            <TagInput
+              value={formData.search_aliases ? formData.search_aliases.split(',').filter(Boolean) : []}
+              onChange={(tags) => setFormData({ ...formData, search_aliases: tags.length > 0 ? tags.join(',') : "" })}
               placeholder="e.g. DU, SOL, Delhi Univ"
             />
             <p className="text-xs text-zinc-500 mt-1">
-              Comma-separated terms for better search.
+              Press Enter or Comma to add a tag.
             </p>
           </div>
 
