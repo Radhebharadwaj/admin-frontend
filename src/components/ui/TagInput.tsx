@@ -11,8 +11,23 @@ export default function TagInput({ value = [], onChange, placeholder = "Add a ta
   const [inputValue, setInputValue] = useState("");
 
   const addTag = (tag: string) => {
-    const trimmed = tag.trim();
-    if (trimmed && !value.includes(trimmed)) {
+    const trimmed = tag.replace(/\s+/g, ' ').trim();
+    if (!trimmed) return;
+    
+    if (trimmed.length > 20) {
+      // Ignore words longer than 20 characters
+      return;
+    }
+
+    if (value.length >= 5) {
+      // Tag limit reached
+      return;
+    }
+
+    // Case-insensitive duplicate check
+    const isDuplicate = value.some((v) => v.toLowerCase() === trimmed.toLowerCase());
+    
+    if (!isDuplicate) {
       onChange([...value, trimmed]);
     }
     setInputValue("");
@@ -49,15 +64,18 @@ export default function TagInput({ value = [], onChange, placeholder = "Add a ta
           </button>
         </span>
       ))}
-      <input
-        type="text"
-        className="flex-1 min-w-[120px] bg-transparent text-white text-sm focus:outline-none placeholder-zinc-600 py-1"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => addTag(inputValue)}
-        placeholder={value.length === 0 ? placeholder : ""}
-      />
+      {value.length < 5 && (
+        <input
+          type="text"
+          className="flex-1 min-w-[120px] bg-transparent text-white text-sm focus:outline-none placeholder-zinc-600 py-1"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => addTag(inputValue)}
+          placeholder={value.length === 0 ? placeholder : ""}
+          maxLength={25}
+        />
+      )}
     </div>
   );
 }
