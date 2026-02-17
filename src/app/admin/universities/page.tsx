@@ -374,9 +374,6 @@ export default function UniversitiesPage() {
               onChange={(tags) => setFormData({ ...formData, search_aliases: tags.length > 0 ? tags.join(',') : "" })}
               placeholder="e.g. DU, SOL, Delhi Univ"
             />
-            <p className="text-xs text-zinc-500 mt-1">
-              Press Enter or Comma to add a tag.
-            </p>
           </div>
 
           {/* Website */}

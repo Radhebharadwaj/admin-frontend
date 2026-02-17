@@ -47,35 +47,50 @@ export default function TagInput({ value = [], onChange, placeholder = "Add a ta
   };
 
   return (
-    <div className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50">
-      {value.map((tag, index) => (
-        <span
-          key={index}
-          className="bg-indigo-500/10 text-indigo-400 rounded-md px-2 py-1 text-sm flex items-center gap-1 font-medium"
-        >
-          {tag}
-          <button
-            type="button"
-            onClick={() => removeTag(index)}
-            className="hover:text-indigo-300 transition-colors focus:outline-none"
-            aria-label={`Remove ${tag}`}
+    <div className="flex flex-col gap-1.5">
+      <div className="w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50">
+        {value.map((tag, index) => (
+          <span
+            key={index}
+            className="bg-indigo-500/10 text-indigo-400 rounded-md px-2 py-1 text-sm flex items-center gap-1 font-medium"
           >
-            <X className="w-3.5 h-3.5" />
-          </button>
+            {tag}
+            <button
+              type="button"
+              onClick={() => removeTag(index)}
+              className="hover:text-indigo-300 transition-colors focus:outline-none"
+              aria-label={`Remove ${tag}`}
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </span>
+        ))}
+        {value.length < 5 && (
+          <div className="flex-1 min-w-[120px] flex items-center relative group">
+            <input
+              type="text"
+              className="w-full bg-transparent text-white text-sm focus:outline-none placeholder-zinc-600 py-1 pr-10"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={() => addTag(inputValue)}
+              placeholder={value.length === 0 ? placeholder : ""}
+              maxLength={25}
+            />
+            {inputValue.length > 0 && (
+              <span className={`absolute right-1 text-[10px] font-medium transition-colors ${inputValue.length >= 20 ? 'text-orange-400' : 'text-zinc-500'}`}>
+                {inputValue.length}/25
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex justify-between items-center text-xs px-1">
+        <span className="text-zinc-500">Press Enter or Comma to add a tag.</span>
+        <span className={`font-medium ${value.length >= 5 ? 'text-orange-400' : 'text-zinc-500'}`}>
+          {value.length} / 5 tags
         </span>
-      ))}
-      {value.length < 5 && (
-        <input
-          type="text"
-          className="flex-1 min-w-[120px] bg-transparent text-white text-sm focus:outline-none placeholder-zinc-600 py-1"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => addTag(inputValue)}
-          placeholder={value.length === 0 ? placeholder : ""}
-          maxLength={25}
-        />
-      )}
+      </div>
     </div>
   );
 }

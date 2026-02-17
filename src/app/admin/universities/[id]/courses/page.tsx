@@ -430,9 +430,6 @@ export default function CoursesPage() {
               onChange={(tags) => setFormData({ ...formData, search_aliases: tags.length > 0 ? tags.join(',') : "" })}
               placeholder="e.g. BCA, Bachelor of Computer Applications"
             />
-            <p className="text-xs text-zinc-500 mt-1">
-              Press Enter or Comma to add a tag.
-            </p>
           </div>
 
           {/* Is Active Toggle */}

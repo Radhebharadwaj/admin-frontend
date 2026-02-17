@@ -338,9 +338,6 @@ export default function SubjectsPage() {
               onChange={(tags) => setFormData({ ...formData, search_aliases: tags.length > 0 ? tags.join(',') : "" })}
               placeholder="e.g. DSA, Data Structures"
             />
-            <p className="text-xs text-zinc-500 mt-1">
-              Press Enter or Comma to add a tag.
-            </p>
           </div>
 
           <div className="pt-6 mt-6 border-t border-zinc-800 flex justify-end gap-3">
