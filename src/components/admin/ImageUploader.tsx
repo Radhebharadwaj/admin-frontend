@@ -139,7 +139,7 @@ export default function ImageUploader({
                 <UploadCloud className="w-10 h-10 text-zinc-600" />
               )}
               <p className="text-sm text-zinc-400">{placeholder}</p>
-              <p className="text-xs text-zinc-600">JPG, PNG, WebP, SVG — Max 5MB</p>
+              <p className="text-xs text-zinc-600">JPG, PNG, WebP, SVG — Max 1MB</p>
             </div>
           )}
 

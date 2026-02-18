@@ -34,11 +34,11 @@ export function useUpload(): UseUploadReturn {
     setState({ uploading: true, progress: 10, error: null });
 
     // Client-side validation
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 1 * 1024 * 1024; // 1MB
     const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/svg+xml"]);
 
     if (file.size > maxSize) {
-      setState({ uploading: false, progress: 0, error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 5MB.` });
+      setState({ uploading: false, progress: 0, error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 1MB.` });
       return null;
     }
 
