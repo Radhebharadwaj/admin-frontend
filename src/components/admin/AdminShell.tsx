@@ -14,7 +14,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { sessionToken, user, setUser } = useAuthStore();
+  const { sessionToken, setSessionToken, user, setUser } = useAuthStore();
 
   useEffect(() => {
     if (!sessionToken) {
