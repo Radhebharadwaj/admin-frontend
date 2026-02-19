@@ -77,8 +77,13 @@ export default function UniversitiesPage() {
   // ===== FETCH FUNCTIONS =====
   const fetchUniversities = async () => {
     setLoading(true);
+    setError("");
     const res = await fetchApi("/api/universities");
-    if (res.success) setUniversities(res.data);
+    if (res.success) {
+      setUniversities(res.data);
+    } else {
+      setError(res.message || "Failed to load universities");
+    }
     setLoading(false);
   };
 
@@ -196,7 +201,11 @@ export default function UniversitiesPage() {
         </div>
         <SearchBar placeholder="Search universities..." value={search} onChange={setSearch} />
         
-        {filtered.length === 0 ? (
+        {error && !isModalOpen ? (
+          <div className="mt-6 p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl flex items-center justify-center text-sm font-medium">
+            {error}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 text-slate-500"><GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" /><p className="font-medium">{search ? "No match" : "No universities yet"}</p></div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
