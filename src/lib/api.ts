@@ -8,10 +8,10 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers || {});
   
   if (sessionToken) {
-    headers.set("Authorization", \`Bearer \${sessionToken}\`);
+    headers.set("Authorization", `Bearer ${sessionToken}`);
   }
 
-  const response = await fetch(\`\${API_URL}\${endpoint}\`, {
+  const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
   });

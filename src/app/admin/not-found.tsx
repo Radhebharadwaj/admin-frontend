@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { FileQuestion, Home } from "lucide-react";
-import { Button } from "@/src/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 
 export default function AdminNotFound() {
   return (

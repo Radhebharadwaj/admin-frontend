@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, BookOpen, GraduationCap, Settings, Menu, X } from "lucide-react";
-import SignOutButton from "@/src/components/admin/SignOutButton";
+import SignOutButton from "@/components/admin/SignOutButton";
 
 export default function AdminShell({ children, role }: { children: React.ReactNode, role: string }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
