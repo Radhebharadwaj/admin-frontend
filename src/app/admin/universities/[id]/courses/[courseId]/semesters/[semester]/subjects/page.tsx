@@ -19,6 +19,7 @@ import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
+import SkeletonTable from "@/components/admin/SkeletonTable";
 
 // ===== TYPES =====
 interface Subject {
@@ -156,11 +157,11 @@ export default function SubjectsPage() {
         items={[
           { label: "Universities", href: "/admin/universities" },
           {
-            label: univName || "...",
+            label: univName || <div className="w-24 h-4 bg-zinc-800 animate-pulse rounded" />,
             href: `/admin/universities/${universityId}/courses`,
           },
           {
-            label: courseName || "...",
+            label: courseName || <div className="w-32 h-4 bg-zinc-800 animate-pulse rounded" />,
             href: `/admin/universities/${universityId}/courses/${courseId}/semesters`,
           },
           { label: `Semester ${semester}` },
@@ -209,10 +210,7 @@ export default function SubjectsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
-          <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-          <p className="text-sm font-medium">Loading subjects...</p>
-        </div>
+        <SkeletonTable />
       ) : (uniError || courseError || subjectsError) ? (
         <div className="flex flex-col items-center justify-center py-32 text-red-500">
           <p className="text-sm font-medium">Failed to load data.</p>

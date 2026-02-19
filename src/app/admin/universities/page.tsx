@@ -24,6 +24,7 @@ import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import ImageUploader from "@/components/admin/ImageUploader";
+import SkeletonTable from "@/components/admin/SkeletonTable";
 
 // ===== TYPES =====
 interface University {
@@ -197,10 +198,7 @@ export default function UniversitiesPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
-          <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-          <p className="text-sm font-medium">Loading universities...</p>
-        </div>
+        <SkeletonTable />
       ) : fetchError ? (
         <div className="flex flex-col items-center justify-center py-32 text-red-500">
           <p className="text-sm font-medium">Failed to load universities.</p>
