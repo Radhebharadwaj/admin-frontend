@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import DataEntryForm from "@/components/admin/DataEntryForm";
 
 import { getDashboardStats, getDropdownData } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 
 export default function AdminClient() {
+  const { user } = useAuthStore();
   const [stats, setStats] = useState({ universities: 0, courses: 0, subjects: 0, totalSales: 0 });
   const [dropdownData, setDropdownData] = useState({ universities: [], courses: [], subjects: [] });
   const [loading, setLoading] = useState(true);
@@ -52,10 +54,13 @@ export default function AdminClient() {
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Total Subjects</p>
           <p className="text-4xl font-extrabold text-slate-900 dark:text-white">{stats.subjects}</p>
         </div>
-        <div className="p-6 bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm">
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Total Sales</p>
-          <p className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">₹{stats.totalSales}</p>
-        </div>
+        
+        {user?.role === "SUPER_ADMIN" && (
+          <div className="p-6 bg-white dark:bg-[#111] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Total Sales</p>
+            <p className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">₹{stats.totalSales}</p>
+          </div>
+        )}
       </div>
 
       <div className="mt-12">

@@ -24,6 +24,10 @@ export async function getDashboardStats() {
   return fetchApi("/api/admin/dashboard");
 }
 
+export async function getAdminProfile() {
+  return fetchApi("/api/admin/me");
+}
+
 export async function getDropdownData() {
   return fetchApi("/api/admin/dropdown");
 }
