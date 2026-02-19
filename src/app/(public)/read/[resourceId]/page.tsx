@@ -7,8 +7,9 @@ import { swrFetcher } from "@/lib/api";
 import { ArrowLeft, BookOpen, Download, Loader2, Lock, Shield } from "lucide-react";
 import Link from "next/link";
 import { useRazorpay } from "@/lib/useRazorpay";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import html2pdf from "html2pdf.js";
 
 interface Resource {
   id: string;
@@ -53,6 +54,27 @@ export default function UniversalReaderPage() {
   );
   const isRazorpayLoaded = useRazorpay();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!contentRef.current || !resource) return;
+    setIsDownloading(true);
+    try {
+      const opt: any = {
+        margin: 1,
+        filename: `${resource.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      await html2pdf().set(opt).from(contentRef.current).save();
+    } catch (error) {
+      console.error("PDF Download failed:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handleUnlock = async () => {
     if (!isRazorpayLoaded) {
@@ -240,7 +262,7 @@ export default function UniversalReaderPage() {
 
       case "internal_module":
         return (
-          <div className="max-w-3xl mx-auto p-6 sm:p-12">
+          <div className="max-w-3xl mx-auto p-6 sm:p-12" ref={contentRef}>
             <div className="prose prose-invert prose-indigo prose-lg max-w-none prose-headings:font-semibold prose-a:text-indigo-400" 
                  dangerouslySetInnerHTML={{ __html: resource.rich_text_content || "" }} 
             />
@@ -262,7 +284,7 @@ export default function UniversalReaderPage() {
       <header className="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => router.back()} 
+            onClick={() => window.history.length > 1 ? router.back() : window.close()} 
             className="p-2 rounded-full hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -278,9 +300,13 @@ export default function UniversalReaderPage() {
 
         <div className="flex items-center gap-2">
           {resource.content_type === "internal_module" && (
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-sm font-medium transition-colors border border-indigo-500/20">
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Download PDF</span>
+            <button 
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-sm font-medium transition-colors border border-indigo-500/20 disabled:opacity-50"
+            >
+              {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span className="hidden sm:inline">{isDownloading ? "Downloading..." : "Download PDF"}</span>
             </button>
           )}
         </div>
