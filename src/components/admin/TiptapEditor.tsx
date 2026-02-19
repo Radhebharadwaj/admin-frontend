@@ -81,6 +81,13 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const isMarkdownOrText = file.name.endsWith('.md') || file.name.endsWith('.txt')
+    if (!isMarkdownOrText) {
+      alert('Please upload a valid .md or .txt file')
+      e.target.value = ''
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = async (event) => {
       const text = event.target?.result as string
@@ -217,7 +224,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           </button>
           <input 
             type="file" 
-            accept=".md,.txt" 
+            accept=".md,.txt,text/plain,text/markdown,*" 
             ref={fileInputRef} 
             onChange={handleFileUpload} 
             className="hidden" 
