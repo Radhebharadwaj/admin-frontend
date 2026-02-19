@@ -15,46 +15,28 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router = useRouter();
   const { sessionToken, setSessionToken, user, setUser } = useAuthStore();
-  const [debugError, setDebugError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sessionToken) {
-      setDebugError("NO SESSION TOKEN — redirecting to login");
       router.push("/");
       return;
     }
 
     if (!user) {
-      setDebugError(`Calling API... Token: ${sessionToken.substring(0, 20)}...`);
       getAdminProfile().then((res) => {
         if (res.success && res.data) {
           setUser(res.data);
-          setDebugError(null);
           setLoading(false);
         } else {
-          setDebugError(`API returned failure: ${JSON.stringify(res)}`);
-          // Don't redirect for now — show debug info
-          setLoading(false);
+          router.push("/unauthorized");
         }
-      }).catch((err) => {
-        setDebugError(`API CATCH ERROR: ${err?.message || String(err)}`);
-        setLoading(false);
+      }).catch(() => {
+        router.push("/unauthorized");
       });
     } else {
       setLoading(false);
     }
   }, [sessionToken, user, setUser, router]);
-
-  if (debugError && !user) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-8">
-        <div className="max-w-2xl w-full bg-zinc-900 border border-red-500/30 rounded-xl p-6">
-          <h2 className="text-red-400 text-lg font-bold mb-4">🔍 Debug Info (temporary)</h2>
-          <pre className="text-green-400 text-sm whitespace-pre-wrap break-all">{debugError}</pre>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
