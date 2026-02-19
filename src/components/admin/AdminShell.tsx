@@ -51,13 +51,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     }
   }, [sessionToken, user, setUser, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
+  // Removed early return to ensure the shell never unmounts
 
   const role = (user?.role || "GUEST") as Role;
 
@@ -198,10 +192,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-auto p-4 lg:p-8">{children}</div>
+        <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-[#0a0a0a] p-4 lg:p-6 relative">
+          <ToastContainer />
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </main>
-      
-      <ToastContainer />
     </div>
   );
 }

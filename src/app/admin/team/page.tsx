@@ -56,22 +56,6 @@ function MemberCard({ member }: { member: TeamMember }) {
 export default function TeamAdminPage() {
   const { data: members = [], isLoading: loading, error: fetchError } = useSWR<TeamMember[]>("/api/team", swrFetcher);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-center">
-        Failed to load team data.
-      </div>
-    );
-  }
-
   const superAdmins = members.filter(m => m.role === "SUPER_ADMIN");
   const admins = members.filter(m => m.role === "ADMIN");
   const editors = members.filter(m => m.role === "EDITOR");
@@ -87,6 +71,16 @@ export default function TeamAdminPage() {
           <Plus className="w-4 h-4" /> Add Member
         </button>
       </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+      ) : fetchError ? (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-center">
+          Failed to load team data.
+        </div>
+      ) : (
 
       <div className="flex-1 overflow-x-auto pb-10">
         <div className="min-w-max mx-auto flex flex-col items-center">
@@ -162,6 +156,7 @@ export default function TeamAdminPage() {
 
         </div>
       </div>
+      )}
     </div>
   );
 }
