@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fetchApi } from "@/lib/api";
+import { useAuthStore } from "./store";
 
 interface UploadState {
   uploading: boolean;
@@ -52,11 +53,38 @@ export function useUpload(): UseUploadReturn {
       formData.append("file", file);
       formData.append("folder", folder);
 
-      setState((prev) => ({ ...prev, progress: 60 }));
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
+      const { sessionToken } = useAuthStore.getState();
 
-      const res = await fetchApi("/api/upload/image", {
-        method: "POST",
-        body: formData,
+      const res = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_URL}/api/upload/image`);
+
+        if (sessionToken) {
+          xhr.setRequestHeader("Authorization", `Bearer ${sessionToken}`);
+        }
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded * 100) / event.total);
+            setState((prev) => ({ ...prev, progress: percentComplete }));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (e) {
+              resolve({ success: false, message: "Invalid JSON response" });
+            }
+          } else {
+            resolve({ success: false, message: `Upload failed (${xhr.status})` });
+          }
+        };
+
+        xhr.onerror = () => reject(new Error("Network Error"));
+        xhr.send(formData);
       });
 
       if (!res.success) {
