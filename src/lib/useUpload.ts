@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { fetchApi } from "@/lib/api";
 import { useAuthStore } from "./store";
+import imageCompression from "browser-image-compression";
 
 interface UploadState {
   uploading: boolean;
@@ -46,11 +47,29 @@ export function useUpload(): UseUploadReturn {
       return null;
     }
 
-    setState((prev) => ({ ...prev, progress: 30 }));
+    setState((prev) => ({ ...prev, progress: 10 }));
 
     try {
+      let fileToUpload = file;
+      if (file.type.startsWith("image/") && file.type !== "image/svg+xml") {
+        const options = {
+          maxSizeMB: 0.2, // 200KB
+          maxWidthOrHeight: 1280,
+          useWebWorker: true,
+          fileType: "image/jpeg"
+        };
+        try {
+          const compressedFile = await imageCompression(file, options);
+          fileToUpload = new File([compressedFile], file.name.replace(/\.[^/.]+$/, ".jpg"), { type: "image/jpeg" });
+        } catch (e) {
+          console.error("Compression failed:", e);
+        }
+      }
+
+      setState((prev) => ({ ...prev, progress: 30 }));
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToUpload);
       formData.append("folder", folder);
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
