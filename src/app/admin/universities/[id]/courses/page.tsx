@@ -23,6 +23,7 @@ import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import SkeletonTable from "@/components/admin/SkeletonTable";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 // ===== TYPES =====
 interface University {
@@ -59,6 +60,10 @@ export default function CoursesPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // ===== Helpers =====
   const autoSlug = (str: string) =>
     str
@@ -86,22 +91,23 @@ export default function CoursesPage() {
     setDrawerOpen(true);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (
-      !confirm(
-        `Are you sure you want to delete "${name}"? This will cascade-delete all subjects, chapters, and resources under it.`
-      )
-    )
-      return;
+  const handleDelete = (id: string, name: string) => {
+    setItemToDelete({ id, name });
+    setDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
     try {
       await mutate(
         async () => {
-          const res = await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
+          const res = await fetchApi(`/api/courses/${itemToDelete.id}`, { method: "DELETE" });
           if (!res.success) throw new Error(res.message);
-          return courses.filter((c) => c.id !== id);
+          return courses.filter((c) => c.id !== itemToDelete.id);
         },
         {
-          optimisticData: courses.filter((c) => c.id !== id),
+          optimisticData: courses.filter((c) => c.id !== itemToDelete.id),
           rollbackOnError: true,
           populateCache: true,
           revalidate: false,
@@ -110,6 +116,10 @@ export default function CoursesPage() {
       addToast("success", "Course deleted successfully.");
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete course.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -459,6 +469,15 @@ export default function CoursesPage() {
           </div>
         </form>
       </SlideOverDrawer>
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={executeDelete}
+        itemName={itemToDelete?.name || ""}
+        isLoading={isDeleting}
+        customMessage="This will cascade-delete all subjects, chapters, and resources under it."
+      />
     </div>
   );
 }
