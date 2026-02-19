@@ -119,6 +119,7 @@ export default function SubjectDetailsPage() {
   const { data: resources = [], error: resError, isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
 
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
+  const [chapterCategoryFilters, setChapterCategoryFilters] = useState<Record<string, string>>({});
 
   const toggleChapter = (id: string) => {
     setExpandedChapters(prev => ({ ...prev, [id]: !prev[id] }));
@@ -557,12 +558,32 @@ export default function SubjectDetailsPage() {
                             <tr>
                               <td colSpan={3} className="px-6 py-6 bg-zinc-900/50 border-t border-zinc-800/50">
                                 <div className="space-y-6">
-                                  {Object.entries(groupedResources).map(([category, resList]) => (
+                                  {/* Filter Section */}
+                                  {Object.keys(groupedResources).length > 1 && (
+                                    <div className="flex justify-end">
+                                      <select
+                                        className="bg-zinc-950 border border-zinc-800 text-zinc-300 text-xs rounded-md px-3 py-1.5 focus:outline-none focus:border-indigo-500"
+                                        value={chapterCategoryFilters[c.id] || "ALL"}
+                                        onChange={(e) => setChapterCategoryFilters(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                      >
+                                        <option value="ALL">All Categories</option>
+                                        {Object.keys(groupedResources).map(cat => (
+                                          <option key={cat} value={cat}>
+                                            {CATEGORIES.find((o) => o.value === cat)?.label || cat}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  )}
+
+                                  {Object.entries(groupedResources)
+                                    .filter(([category]) => !chapterCategoryFilters[c.id] || chapterCategoryFilters[c.id] === "ALL" || chapterCategoryFilters[c.id] === category)
+                                    .map(([category, resList]) => (
                                     <div key={category}>
                                       <h4 className="text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">
                                         {CATEGORIES.find((o) => o.value === category)?.label || category}
                                       </h4>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                         {resList.map((r) => (
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
                                             <ResourceImage resource={r} />
