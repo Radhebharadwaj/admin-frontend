@@ -33,9 +33,23 @@ export default function UniversalReaderPage() {
   const router = useRouter();
   const resourceId = params.resourceId as string;
 
+  const fetcherWithAuth = async (url: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const headers: Record<string, string> = {};
+    if (session) {
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+    }
+    const res = await fetch(`${API_URL}${url}`, { headers });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.message || "Failed to fetch resource");
+    }
+    return json.data;
+  };
+
   const { data: resource, isLoading, mutate } = useSWR<Resource>(
     `/api/resources/${resourceId}`,
-    swrFetcher
+    fetcherWithAuth
   );
   const isRazorpayLoaded = useRazorpay();
   const [isProcessing, setIsProcessing] = useState(false);
