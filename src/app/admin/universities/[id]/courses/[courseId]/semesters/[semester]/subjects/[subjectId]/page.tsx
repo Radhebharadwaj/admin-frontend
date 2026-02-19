@@ -12,6 +12,7 @@ import {
   File,
   ExternalLink,
   Lock,
+  UploadCloud,
 } from "lucide-react";
 import useSWR from "swr";
 import Image from "next/image";
@@ -24,6 +25,7 @@ import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import ImageUploader from "@/components/admin/ImageUploader";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
+import TiptapEditor from "@/components/admin/TiptapEditor";
 
 // ===== TYPES =====
 interface Chapter {
@@ -49,6 +51,9 @@ interface Resource {
   valid_from?: string | null;
   free_after_date?: string | null;
   submission_deadline?: string | null;
+  content_type?: string;
+  r2_object_key?: string | null;
+  rich_text_content?: string | null;
 }
 
 const CATEGORIES = [
@@ -94,6 +99,38 @@ export default function SubjectDetailsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string; name: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      addToast("error", "File is too large. Maximum size is 50MB.");
+      return;
+    }
+
+    setUploadingDoc(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      uploadData.append("folder", "documents");
+
+      const res = await fetchApi("/api/upload/document", {
+        method: "POST",
+        body: uploadData,
+      });
+
+      if (!res.success) throw new Error(res.message);
+      
+      setFormData((prev: any) => ({ ...prev, r2_object_key: res.data.url }));
+      addToast("success", "File uploaded successfully.");
+    } catch (err: any) {
+      addToast("error", err.message || "File upload failed.");
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
 
   // ===== Drawer Helpers =====
   const openChapterCreate = () => {
@@ -126,6 +163,9 @@ export default function SubjectDetailsPage() {
       valid_from: "",
       free_after_date: "",
       submission_deadline: "",
+      content_type: "external_url",
+      r2_object_key: "",
+      rich_text_content: "",
     });
     setError("");
     setDrawerOpen(true);
@@ -141,6 +181,9 @@ export default function SubjectDetailsPage() {
       valid_from: r.valid_from ? new Date(r.valid_from).toISOString().slice(0, 16) : "",
       free_after_date: r.free_after_date ? new Date(r.free_after_date).toISOString().slice(0, 16) : "",
       submission_deadline: r.submission_deadline ? new Date(r.submission_deadline).toISOString().slice(0, 16) : "",
+      content_type: r.content_type || "external_url",
+      r2_object_key: r.r2_object_key || "",
+      rich_text_content: r.rich_text_content || "",
     });
     setError("");
     setDrawerOpen(true);
@@ -242,12 +285,15 @@ export default function SubjectDetailsPage() {
           chapter_id: formData.chapter_id || null,
           price_in_inr: formData.is_free ? 0 : parseInt(formData.price_in_inr || "0"),
           is_public: formData.is_public ? 1 : 0,
-          external_url: formData.external_url || null,
+          external_url: formData.content_type === "external_url" ? (formData.external_url || null) : null,
           thumbnail_url: formData.thumbnail_url || null,
           description: formData.description || null,
           valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
           free_after_date: formData.free_after_date ? new Date(formData.free_after_date).toISOString() : null,
           submission_deadline: formData.submission_deadline && (formData.category === "ASSIGNMENT" || formData.category === "PROJECT") ? new Date(formData.submission_deadline).toISOString() : null,
+          content_type: formData.content_type || "external_url",
+          r2_object_key: formData.content_type === "r2_upload" ? (formData.r2_object_key || null) : null,
+          rich_text_content: formData.content_type === "internal_module" ? (formData.rich_text_content || null) : null,
         };
         delete payload.is_free;
         if (!editingId) payload.subject_id = subjectId;
@@ -737,23 +783,125 @@ export default function SubjectDetailsPage() {
                 </span>
               </div>
 
-              <div>
-                <label className={labelClass}>
-                  External URL{" "}
-                  <span className="text-zinc-600">(PDF / Video Link)</span>
-                </label>
-                <input
-                  type="url"
-                  className={inputClass}
-                  value={formData.external_url || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, external_url: e.target.value })
-                  }
-                  placeholder="https://egyankosh.ac.in/bitstream/..."
-                />
-                <p className="text-xs text-zinc-600 mt-1.5">
-                  For eBooks/Govt PDFs. Will be served via our CORS proxy.
-                </p>
+              {/* Content Source Switcher */}
+              <div className="space-y-3">
+                <label className={labelClass}>Content Source</label>
+                <div className="flex gap-2 p-1 bg-zinc-900 rounded-xl border border-zinc-800">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, content_type: "external_url" })}
+                    className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-colors ${
+                      formData.content_type === "external_url"
+                        ? "bg-zinc-800 text-white shadow-sm"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    External Link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, content_type: "r2_upload" })}
+                    className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-colors ${
+                      formData.content_type === "r2_upload"
+                        ? "bg-zinc-800 text-white shadow-sm"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, content_type: "internal_module" })}
+                    className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-colors ${
+                      formData.content_type === "internal_module"
+                        ? "bg-zinc-800 text-white shadow-sm"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    Internal Module
+                  </button>
+                </div>
+
+                {/* Tab Content */}
+                <div className="mt-4">
+                  {formData.content_type === "external_url" && (
+                    <div className="animate-in fade-in duration-300">
+                      <input
+                        type="url"
+                        className={inputClass}
+                        value={formData.external_url || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, external_url: e.target.value })
+                        }
+                        placeholder="https://egyankosh.ac.in/bitstream/..."
+                      />
+                      <p className="text-xs text-zinc-600 mt-1.5">
+                        For eBooks/Govt PDFs. Will be served via our CORS proxy.
+                      </p>
+                    </div>
+                  )}
+
+                  {formData.content_type === "r2_upload" && (
+                    <div className="animate-in fade-in duration-300">
+                      {formData.r2_object_key ? (
+                        <div className="flex items-center justify-between p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <File className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+                            <div className="truncate">
+                              <p className="text-sm font-semibold text-white truncate">
+                                {formData.r2_object_key.split("/").pop()}
+                              </p>
+                              <p className="text-xs text-indigo-300">Upload Complete</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, r2_object_key: "" })}
+                            className="p-2 text-zinc-400 hover:text-white transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-zinc-800 border-dashed rounded-xl cursor-pointer bg-zinc-900/50 hover:bg-zinc-800/50 hover:border-zinc-700 transition-all group">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {uploadingDoc ? (
+                              <>
+                                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                                <p className="text-sm font-semibold text-zinc-300">Uploading to R2...</p>
+                              </>
+                            ) : (
+                              <>
+                                <UploadCloud className="w-8 h-8 text-zinc-500 group-hover:text-indigo-400 transition-colors mb-2" />
+                                <p className="text-sm font-semibold text-zinc-300">Click to upload a document</p>
+                                <p className="text-xs text-zinc-500 mt-1">PDF, MP4, WebM (Max 50MB)</p>
+                              </>
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="application/pdf,video/mp4,video/webm,application/epub+zip,application/zip"
+                            onChange={handleFileUpload}
+                            disabled={uploadingDoc}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
+
+                  {formData.content_type === "internal_module" && (
+                    <div className="animate-in fade-in duration-300">
+                      <TiptapEditor
+                        value={formData.rich_text_content || ""}
+                        onChange={(val) => setFormData({ ...formData, rich_text_content: val })}
+                      />
+                      <p className="text-xs text-zinc-500 mt-2">
+                        This module will be rendered natively inside the student's learning portal.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
