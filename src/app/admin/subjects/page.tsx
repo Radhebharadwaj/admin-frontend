@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import useSWR from "swr";
+import Link from "next/link";
 import { Search, BookOpen, ArrowRight, GraduationCap, Layers } from "lucide-react";
 import Breadcrumb from "@/components/admin/Breadcrumb";
-import { fetchApi } from "@/lib/api";
+import { swrFetcher } from "@/lib/api";
 
 interface SearchResult {
   id: string;
@@ -20,32 +21,25 @@ interface SearchResult {
 }
 
 export default function GlobalSubjectSearchPage() {
-  const router = useRouter();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // Debounced search
-  const doSearch = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); setSearched(false); return; }
-    setLoading(true);
-    setSearched(true);
-    try {
-      const res = await fetchApi(`/api/subjects/search?q=${encodeURIComponent(q)}`);
-      if (res.success) setResults(res.data);
-    } catch (e) { }
-    setLoading(false);
-  }, []);
-
+  // Debounce the query for SWR
   useEffect(() => {
-    const timer = setTimeout(() => doSearch(query), 300);
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [query, doSearch]);
+  }, [query]);
 
-  const navigateToSubject = (result: SearchResult) => {
-    router.push(`/admin/universities/${result.university_id}/courses/${result.course_id}/semesters/${result.semester}/subjects`);
-  };
+  // SWR automatically handles loading and caching
+  const shouldFetch = debouncedQuery.length >= 2;
+  const { data: results = [], isLoading: loading } = useSWR<SearchResult[]>(
+    shouldFetch ? `/api/subjects/search?q=${encodeURIComponent(debouncedQuery)}` : null,
+    swrFetcher
+  );
+  
+  const searched = debouncedQuery.length >= 2;
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -87,10 +81,10 @@ export default function GlobalSubjectSearchPage() {
         <div className="space-y-3 max-w-2xl">
           <p className="text-sm text-slate-500 mb-4">{results.length} result{results.length !== 1 ? "s" : ""} found</p>
           {results.map((result) => (
-            <button
+            <Link
               key={result.id}
-              onClick={() => navigateToSubject(result)}
-              className="w-full text-left bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 hover:border-indigo-500/30 transition-all group"
+              href={`/admin/universities/${result.university_id}/courses/${result.course_id}/semesters/${result.semester}/subjects`}
+              className="w-full block text-left bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 hover:border-indigo-500/30 transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -110,7 +104,7 @@ export default function GlobalSubjectSearchPage() {
                 </div>
                 <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors shrink-0 ml-3" />
               </div>
-            </button>
+            </Link>
           ))}
         </div>
       )}

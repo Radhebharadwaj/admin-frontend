@@ -13,7 +13,9 @@ import {
   Clock,
   Layers,
 } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import useSWR from "swr";
+import Link from "next/link";
+import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
@@ -45,9 +47,8 @@ export default function CoursesPage() {
   const role = (user?.role || "GUEST") as Role;
 
   // Data
-  const [university, setUniversity] = useState<University | null>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: university, error: uniError } = useSWR<University>(`/api/universities/${universityId}`, swrFetcher);
+  const { data: courses = [], error: coursesError, isLoading: loading, mutate } = useSWR<Course[]>(`/api/courses?university_id=${universityId}`, swrFetcher);
   const [search, setSearch] = useState("");
 
   // Drawer
@@ -56,22 +57,6 @@ export default function CoursesPage() {
   const [formData, setFormData] = useState<Partial<Course>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // ===== Data Fetching =====
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [uniRes, coursesRes] = await Promise.all([
-      fetchApi(`/api/universities/${universityId}`),
-      fetchApi(`/api/courses?university_id=${universityId}`),
-    ]);
-    if (uniRes.success) setUniversity(uniRes.data);
-    if (coursesRes.success) setCourses(coursesRes.data);
-    setLoading(false);
-  }, [universityId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // ===== Helpers =====
   const autoSlug = (str: string) =>
@@ -111,7 +96,7 @@ export default function CoursesPage() {
       const res = await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
       if (!res.success) throw new Error(res.message);
       addToast("success", "Course deleted successfully.");
-      await fetchData();
+      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete course.");
     }
@@ -139,7 +124,7 @@ export default function CoursesPage() {
       });
       if (!res.success) throw new Error(res.message);
       addToast("success", editingId ? "Course updated successfully." : "Course created successfully.");
-      await fetchData();
+      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
@@ -217,6 +202,10 @@ export default function CoursesPage() {
           <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
           <p className="text-sm font-medium">Loading courses...</p>
         </div>
+      ) : (uniError || coursesError) ? (
+        <div className="flex flex-col items-center justify-center py-32 text-red-500">
+          <p className="text-sm font-medium">Failed to load data.</p>
+        </div>
       ) : (
         <DataTable
           headers={["Course", "Duration", "Semesters", "Status", "Actions"]}
@@ -240,9 +229,9 @@ export default function CoursesPage() {
                     <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="font-semibold text-white text-sm">
+                    <Link href={`/admin/universities/${universityId}/courses/${c.id}/semesters`} className="font-semibold text-white text-sm hover:text-indigo-400 transition-colors" onClick={(e) => e.stopPropagation()}>
                       {c.name}
-                    </div>
+                    </Link>
                     <div className="text-xs text-zinc-500 font-mono mt-0.5">
                       {c.slug}
                     </div>

@@ -13,7 +13,9 @@ import {
   Globe,
   ExternalLink,
 } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import useSWR from "swr";
+import Link from "next/link";
+import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
@@ -38,8 +40,7 @@ export default function UniversitiesPage() {
   const role = (user?.role || "GUEST") as Role;
 
   // Data
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: universities = [], error: fetchError, isLoading: loading, mutate } = useSWR<University[]>("/api/universities", swrFetcher);
   const [search, setSearch] = useState("");
 
   // Drawer
@@ -48,18 +49,6 @@ export default function UniversitiesPage() {
   const [formData, setFormData] = useState<Partial<University>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // ===== Data Fetching =====
-  const fetchUniversities = useCallback(async () => {
-    setLoading(true);
-    const res = await fetchApi("/api/universities");
-    if (res.success) setUniversities(res.data);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchUniversities();
-  }, [fetchUniversities]);
 
   // ===== Helpers =====
   const autoSlug = (str: string) =>
@@ -89,7 +78,7 @@ export default function UniversitiesPage() {
       const res = await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
       if (!res.success) throw new Error(res.message);
       addToast("success", "University deleted successfully.");
-      await fetchUniversities();
+      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete university.");
     }
@@ -110,7 +99,7 @@ export default function UniversitiesPage() {
       });
       if (!res.success) throw new Error(res.message);
       addToast("success", editingId ? "University updated successfully." : "University created successfully.");
-      await fetchUniversities();
+      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
@@ -183,6 +172,10 @@ export default function UniversitiesPage() {
           <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
           <p className="text-sm font-medium">Loading universities...</p>
         </div>
+      ) : fetchError ? (
+        <div className="flex flex-col items-center justify-center py-32 text-red-500">
+          <p className="text-sm font-medium">Failed to load universities.</p>
+        </div>
       ) : (
         <DataTable
           headers={["University", "Website", "Status", "Actions"]}
@@ -211,7 +204,9 @@ export default function UniversitiesPage() {
                     </div>
                   )}
                   <div>
-                    <div className="font-semibold text-white text-sm">{u.name}</div>
+                    <Link href={`/admin/universities/${u.id}/courses`} className="font-semibold text-white text-sm hover:text-indigo-400 transition-colors" onClick={(e) => e.stopPropagation()}>
+                      {u.name}
+                    </Link>
                     <div className="text-xs text-zinc-500 font-mono mt-0.5">{u.slug}</div>
                   </div>
                 </div>

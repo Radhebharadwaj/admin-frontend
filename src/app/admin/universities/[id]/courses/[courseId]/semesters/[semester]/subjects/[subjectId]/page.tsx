@@ -12,7 +12,8 @@ import {
   File,
   ExternalLink,
 } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import useSWR from "swr";
+import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
@@ -62,16 +63,17 @@ export default function SubjectDetailsPage() {
   const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
-  // Context for breadcrumb
-  const [univName, setUnivName] = useState("");
-  const [courseName, setCourseName] = useState("");
-  const [subjectCode, setSubjectCode] = useState("");
-  const [subjectName, setSubjectName] = useState("");
-
   // Data
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: uniData } = useSWR(`/api/universities/${universityId}`, swrFetcher);
+  const { data: courseData } = useSWR(`/api/courses/${courseId}`, swrFetcher);
+  const { data: subData } = useSWR(`/api/subjects/${subjectId}`, swrFetcher);
+  const { data: chapters = [], mutate: mutateChapters } = useSWR<Chapter[]>(`/api/chapters?subject_id=${subjectId}`, swrFetcher);
+  const { data: resources = [], isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
+
+  const univName = uniData?.name || "";
+  const courseName = courseData?.name || "";
+  const subjectCode = subData?.subject_code || "";
+  const subjectName = subData?.name || "";
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -80,32 +82,6 @@ export default function SubjectDetailsPage() {
   const [formData, setFormData] = useState<any>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [uniRes, courseRes, subRes, chRes, rsRes] = await Promise.all([
-      fetchApi(`/api/universities/${universityId}`),
-      fetchApi(`/api/courses/${courseId}`),
-      fetchApi(`/api/subjects/${subjectId}`),
-      fetchApi(`/api/chapters?subject_id=${subjectId}`),
-      fetchApi(`/api/resources?subject_id=${subjectId}`),
-    ]);
-    if (uniRes.success) setUnivName(uniRes.data.name);
-    if (courseRes.success) setCourseName(courseRes.data.name);
-    if (subRes.success) {
-      setSubjectCode(subRes.data.subject_code);
-      setSubjectName(subRes.data.name);
-    }
-    if (chRes.success) setChapters(chRes.data);
-    else setChapters([]);
-    if (rsRes.success) setResources(rsRes.data);
-    else setResources([]);
-    setLoading(false);
-  }, [universityId, courseId, subjectId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // ===== Drawer Helpers =====
   const openChapterCreate = () => {
@@ -150,15 +126,16 @@ export default function SubjectDetailsPage() {
     setDrawerOpen(true);
   };
 
-  const handleDelete = async (entity: string, id: string, name: string) => {
+  const handleDelete = async (type: string, id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This is permanent.`)) return;
     try {
-      const res = await fetchApi(`/api/${entity}/${id}`, { method: "DELETE" });
+      const res = await fetchApi(`/api/${type}/${id}`, { method: "DELETE" });
       if (!res.success) throw new Error(res.message);
-      addToast("success", `${entity === "chapters" ? "Chapter" : "Resource"} deleted successfully.`);
-      await fetchData();
+      addToast("success", "Deleted successfully.");
+      if (type === "chapters") mutateChapters();
+      else mutateResources();
     } catch (err: any) {
-      addToast("error", err.message || `Failed to delete ${entity}.`);
+      addToast("error", err.message || `Failed to delete ${type}.`);
     }
   };
 
@@ -181,7 +158,8 @@ export default function SubjectDetailsPage() {
           body: JSON.stringify(payload),
         });
         if (!res.success) throw new Error(res.message);
-        addToast("success", editingId ? "Chapter updated successfully." : "Chapter created successfully.");
+        addToast("success", "Saved successfully.");
+        mutateChapters();
       } else {
         const url = editingId
           ? `/api/resources/${editingId}`
@@ -202,9 +180,9 @@ export default function SubjectDetailsPage() {
           body: JSON.stringify(payload),
         });
         if (!res.success) throw new Error(res.message);
-        addToast("success", editingId ? "Resource updated successfully." : "Resource created successfully.");
+        addToast("success", "Saved successfully.");
+        mutateResources();
       }
-      await fetchData();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);

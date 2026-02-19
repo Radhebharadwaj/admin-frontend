@@ -36,6 +36,14 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   }
 }
 
+export const swrFetcher = async (endpoint: string) => {
+  const res = await fetchApi(endpoint);
+  if (!res.success) {
+    throw new Error(res.message || "Failed to fetch data");
+  }
+  return res.data;
+};
+
 export async function getDashboardStats() {
   return fetchApi("/api/admin/dashboard");
 }

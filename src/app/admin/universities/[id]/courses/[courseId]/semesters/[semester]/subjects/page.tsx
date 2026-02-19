@@ -11,7 +11,9 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import useSWR from "swr";
+import Link from "next/link";
+import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
 import Breadcrumb from "@/components/admin/Breadcrumb";
@@ -36,14 +38,14 @@ export default function SubjectsPage() {
   const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
-  // Context data for breadcrumb
-  const [univName, setUnivName] = useState("");
-  const [courseName, setCourseName] = useState("");
-
   // Data
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: uniData, error: uniError } = useSWR(`/api/universities/${universityId}`, swrFetcher);
+  const { data: courseData, error: courseError } = useSWR(`/api/courses/${courseId}`, swrFetcher);
+  const { data: subjects = [], error: subjectsError, isLoading: loading, mutate } = useSWR<Subject[]>(`/api/subjects?course_id=${courseId}&semester=${semester}`, swrFetcher);
   const [search, setSearch] = useState("");
+
+  const univName = uniData?.name || "";
+  const courseName = courseData?.name || "";
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -51,23 +53,6 @@ export default function SubjectsPage() {
   const [formData, setFormData] = useState<Partial<Subject>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [uniRes, courseRes, subRes] = await Promise.all([
-      fetchApi(`/api/universities/${universityId}`),
-      fetchApi(`/api/courses/${courseId}`),
-      fetchApi(`/api/subjects?course_id=${courseId}&semester=${semester}`),
-    ]);
-    if (uniRes.success) setUnivName(uniRes.data.name);
-    if (courseRes.success) setCourseName(courseRes.data.name);
-    if (subRes.success) setSubjects(subRes.data);
-    setLoading(false);
-  }, [universityId, courseId, semester]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   // ===== CRUD =====
   const openCreate = () => {
@@ -95,7 +80,7 @@ export default function SubjectsPage() {
       const res = await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
       if (!res.success) throw new Error(res.message);
       addToast("success", "Subject deleted successfully.");
-      await fetchData();
+      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete subject.");
     }
@@ -117,7 +102,7 @@ export default function SubjectsPage() {
       });
       if (!res.success) throw new Error(res.message);
       addToast("success", editingId ? "Subject updated successfully." : "Subject created successfully.");
-      await fetchData();
+      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
@@ -200,6 +185,10 @@ export default function SubjectsPage() {
           <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
           <p className="text-sm font-medium">Loading subjects...</p>
         </div>
+      ) : (uniError || courseError || subjectsError) ? (
+        <div className="flex flex-col items-center justify-center py-32 text-red-500">
+          <p className="text-sm font-medium">Failed to load data.</p>
+        </div>
       ) : (
         <DataTable
           headers={["Subject Code", "Subject Name", "Actions"]}
@@ -218,9 +207,11 @@ export default function SubjectsPage() {
               }
             >
               <td className="px-6 py-4">
-                <span className="font-mono text-xs font-bold tracking-wide text-zinc-300 bg-zinc-800 border border-zinc-700 px-3 py-1.5 rounded-md">
-                  {s.subject_code}
-                </span>
+                <Link href={`/admin/universities/${universityId}/courses/${courseId}/semesters/${semester}/subjects/${s.id}`} onClick={(e) => e.stopPropagation()}>
+                  <span className="font-mono text-xs font-bold tracking-wide text-zinc-300 bg-zinc-800 border border-zinc-700 px-3 py-1.5 rounded-md hover:text-indigo-400 hover:border-indigo-500/50 transition-colors">
+                    {s.subject_code}
+                  </span>
+                </Link>
               </td>
               <td className="px-6 py-4 text-sm font-semibold text-white">
                 {s.name}
