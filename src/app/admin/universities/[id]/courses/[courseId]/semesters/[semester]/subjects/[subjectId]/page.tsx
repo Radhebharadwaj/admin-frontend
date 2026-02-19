@@ -7,7 +7,7 @@ import {
   FileText,
   Plus,
   Trash2,
-  MoreHorizontal,
+  Pencil,
   Loader2,
   File,
   ExternalLink,
@@ -84,6 +84,7 @@ export default function SubjectDetailsPage() {
   const [formData, setFormData] = useState<any>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
 
   // ===== Drawer Helpers =====
   const openChapterCreate = () => {
@@ -394,8 +395,9 @@ export default function SubjectDetailsPage() {
                               <button
                                 onClick={() => openChapterEdit(c)}
                                 className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                                title="Edit Chapter"
                               >
-                                <MoreHorizontal className="w-4 h-4" />
+                                <Pencil className="w-4 h-4" />
                               </button>
                             )}
                             {canDelete(role, "chapters") && (
@@ -502,8 +504,9 @@ export default function SubjectDetailsPage() {
                       <button
                         onClick={() => openResourceEdit(r)}
                         className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                        title="Edit Resource"
                       >
-                        <MoreHorizontal className="w-4 h-4" />
+                        <Pencil className="w-4 h-4" />
                       </button>
                     )}
                     {canDelete(role, "resources") && (
@@ -585,21 +588,39 @@ export default function SubjectDetailsPage() {
                   Unit / Block Name{" "}
                   <span className="text-zinc-600">(Optional)</span>
                 </label>
-                <input
-                  type="text"
-                  list="unit-names"
-                  className={inputClass}
-                  value={formData.unit_name || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unit_name: e.target.value })
-                  }
-                  placeholder="Block 1"
-                />
-                <datalist id="unit-names">
-                  {Array.from(new Set(chapters.map((c) => c.unit_name).filter(Boolean))).map((u) => (
-                    <option key={u} value={u!} />
-                  ))}
-                </datalist>
+                <div className="relative">
+                  <input
+                    type="text"
+                    className={inputClass}
+                    value={formData.unit_name || ""}
+                    onChange={(e) => {
+                      setFormData({ ...formData, unit_name: e.target.value });
+                      setShowUnitDropdown(true);
+                    }}
+                    onFocus={() => setShowUnitDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowUnitDropdown(false), 200)}
+                    placeholder="Block 1"
+                  />
+                  {showUnitDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl max-h-48 overflow-auto">
+                      {Array.from(new Set(chapters.map((c) => c.unit_name).filter(Boolean)))
+                        .filter((u) => u!.toLowerCase().includes((formData.unit_name || "").toLowerCase()))
+                        .map((u) => (
+                          <button
+                            key={u}
+                            type="button"
+                            className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors border-b border-zinc-800/50 last:border-0"
+                            onClick={() => {
+                              setFormData({ ...formData, unit_name: u });
+                              setShowUnitDropdown(false);
+                            }}
+                          >
+                            {u}
+                          </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-zinc-600 mt-1.5">
                   Type a new unit or select an existing one to group chapters.
                 </p>
