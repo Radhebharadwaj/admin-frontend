@@ -33,7 +33,7 @@ export default function SubjectsPage() {
   const universityId = params.id as string;
   const courseId = params.courseId as string;
   const semester = parseInt(params.semester as string);
-  const { user } = useAuthStore();
+  const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
   // Context data for breadcrumb
@@ -91,8 +91,14 @@ export default function SubjectsPage() {
       )
     )
       return;
-    await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
-    await fetchData();
+    try {
+      const res = await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
+      if (!res.success) throw new Error(res.message);
+      addToast("success", "Subject deleted successfully.");
+      await fetchData();
+    } catch (err: any) {
+      addToast("error", err.message || "Failed to delete subject.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,10 +116,12 @@ export default function SubjectsPage() {
         body: JSON.stringify(payload),
       });
       if (!res.success) throw new Error(res.message);
+      addToast("success", editingId ? "Subject updated successfully." : "Subject created successfully.");
       await fetchData();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", err.message || "Failed to save subject.");
     }
     setFormLoading(false);
   };
@@ -196,7 +204,7 @@ export default function SubjectsPage() {
         <DataTable
           headers={["Subject Code", "Subject Name", "Actions"]}
           emptyIcon={FileText}
-          emptyText="No subjects in this semester yet."
+          emptyText="No subjects found. Add your first subject here."
           rowCount={filtered.length}
         >
           {filtered.map((s) => (

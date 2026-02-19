@@ -41,7 +41,7 @@ export default function CoursesPage() {
   const router = useRouter();
   const params = useParams();
   const universityId = params.id as string;
-  const { user } = useAuthStore();
+  const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
   // Data
@@ -107,8 +107,14 @@ export default function CoursesPage() {
       )
     )
       return;
-    await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
-    await fetchData();
+    try {
+      const res = await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
+      if (!res.success) throw new Error(res.message);
+      addToast("success", "Course deleted successfully.");
+      await fetchData();
+    } catch (err: any) {
+      addToast("error", err.message || "Failed to delete course.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -132,10 +138,12 @@ export default function CoursesPage() {
         body: JSON.stringify(payload),
       });
       if (!res.success) throw new Error(res.message);
+      addToast("success", editingId ? "Course updated successfully." : "Course created successfully.");
       await fetchData();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", err.message || "Failed to save course.");
     }
     setFormLoading(false);
   };
@@ -213,7 +221,7 @@ export default function CoursesPage() {
         <DataTable
           headers={["Course", "Duration", "Semesters", "Status", "Actions"]}
           emptyIcon={BookOpen}
-          emptyText="No courses found. Create one to get started."
+          emptyText="No courses found. Add your first course here."
           rowCount={filtered.length}
         >
           {filtered.map((c) => (

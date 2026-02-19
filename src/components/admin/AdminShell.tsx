@@ -15,6 +15,7 @@ import {
   FileText,
 } from "lucide-react";
 import SignOutButton from "@/components/admin/SignOutButton";
+import ToastContainer from "@/components/admin/ToastContainer";
 import { useAuthStore } from "@/lib/store";
 import { getAdminProfile } from "@/lib/api";
 import { canView, type Role } from "@/lib/rbac";
@@ -199,6 +200,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         {/* Page Content */}
         <div className="flex-1 overflow-auto p-4 lg:p-8">{children}</div>
       </main>
+      
+      <ToastContainer />
     </div>
   );
 }
