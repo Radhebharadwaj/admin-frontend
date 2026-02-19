@@ -583,7 +583,7 @@ export default function SubjectDetailsPage() {
                                       <h4 className="text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">
                                         {CATEGORIES.find((o) => o.value === category)?.label || category}
                                       </h4>
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                         {resList.map((r) => (
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
                                             <ResourceImage resource={r} />
