@@ -19,7 +19,7 @@ export default function TeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -87,7 +87,7 @@ export default function TeamPage() {
       setModalLoading(true);
       const url = editingId ? `${API_URL}/api/team/${editingId}` : `${API_URL}/api/team`;
       const method = editingId ? "PATCH" : "POST";
-      
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -96,12 +96,12 @@ export default function TeamPage() {
         },
         body: JSON.stringify(formData),
       });
-      
+
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Operation failed");
       }
-      
+
       await fetchMembers(sessionToken);
       handleCloseModal();
     } catch (error: any) {
@@ -113,7 +113,7 @@ export default function TeamPage() {
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     if (!sessionToken || !confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this user?`)) return;
-    
+
     try {
       const res = await fetch(`${API_URL}/api/team/${id}`, {
         method: "PATCH",
@@ -135,7 +135,7 @@ export default function TeamPage() {
 
   const handleDelete = async (id: string) => {
     if (!sessionToken || !confirm("Are you sure you want to permanently delete this member?")) return;
-    
+
     try {
       const res = await fetch(`${API_URL}/api/team/${id}`, {
         method: "DELETE",
@@ -201,9 +201,8 @@ export default function TeamPage() {
                     <tr key={member.id} className="hover:bg-zinc-800/20 transition-colors">
                       <td className="px-6 py-4 font-medium">{member.email}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          member.role === 'SUPER_ADMIN' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        }`}>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${member.role === 'SUPER_ADMIN' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
                           {member.role}
                         </span>
                       </td>
@@ -213,9 +212,8 @@ export default function TeamPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`flex items-center gap-1.5 text-sm font-medium ${
-                          member.is_active ? 'text-green-400' : 'text-zinc-500'
-                        }`}>
+                        <span className={`flex items-center gap-1.5 text-sm font-medium ${member.is_active ? 'text-green-400' : 'text-zinc-500'
+                          }`}>
                           <span className={`w-2 h-2 rounded-full ${member.is_active ? 'bg-green-400' : 'bg-zinc-500'}`}></span>
                           {member.is_active ? 'Active' : 'Inactive'}
                         </span>
@@ -231,11 +229,10 @@ export default function TeamPage() {
                           </button>
                           <button
                             onClick={() => handleToggleActive(member.id, member.is_active)}
-                            className={`p-2 rounded-lg transition-colors ${
-                              member.is_active 
-                                ? 'text-orange-400 hover:bg-orange-400/10' 
+                            className={`p-2 rounded-lg transition-colors ${member.is_active
+                                ? 'text-orange-400 hover:bg-orange-400/10'
                                 : 'text-green-400 hover:bg-green-400/10'
-                            }`}
+                              }`}
                             title={member.is_active ? "Deactivate" : "Activate"}
                           >
                             <PowerOff className="w-4 h-4" />
@@ -280,7 +277,7 @@ export default function TeamPage() {
                   placeholder="admin@quduhub.com"
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1.5">Role</label>
@@ -306,6 +303,7 @@ export default function TeamPage() {
                   </select>
                 </div>
               </div>
+
 
               <div className="pt-4 flex justify-end gap-3">
                 <button
