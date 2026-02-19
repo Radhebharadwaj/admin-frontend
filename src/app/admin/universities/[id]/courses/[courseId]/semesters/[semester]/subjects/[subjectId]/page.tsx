@@ -101,13 +101,13 @@ export default function SubjectDetailsPage() {
     setError("");
     setDrawerOpen(true);
   };
-  const openResourceCreate = () => {
+  const openContextualResourceCreate = (chapterId: string | null) => {
     setFormType("resource");
     setEditingId(null);
     setFormData({
       title: "",
       category: "ASSIGNMENT",
-      chapter_id: "",
+      chapter_id: chapterId || "",
       external_url: "",
       thumbnail_url: null,
       description: "",
@@ -323,14 +323,6 @@ export default function SubjectDetailsPage() {
               <Plus className="w-4 h-4" /> Add Chapter
             </button>
           )}
-          {canEdit(role, "resources") && (
-            <button
-              onClick={openResourceCreate}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95"
-            >
-              <Plus className="w-4 h-4" /> Add Resource
-            </button>
-          )}
         </div>
       </div>
 
@@ -387,10 +379,37 @@ export default function SubjectDetailsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm font-semibold text-white align-middle">
-                          {c.title}
+                          <div className="flex flex-col gap-2">
+                            <span>{c.title}</span>
+                            {resources.filter((r) => r.chapter_id === c.id).length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {resources
+                                  .filter((r) => r.chapter_id === c.id)
+                                  .map((r) => (
+                                    <button
+                                      key={r.id}
+                                      onClick={() => openResourceEdit(r)}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-medium hover:bg-indigo-500/20 transition-colors text-left"
+                                    >
+                                      <FileText className="w-3 h-3 shrink-0" />
+                                      <span className="truncate max-w-[150px]">{r.title}</span>
+                                    </button>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-right align-middle">
                           <div className="flex items-center justify-end gap-1">
+                            {canEdit(role, "resources") && (
+                              <button
+                                onClick={() => openContextualResourceCreate(c.id)}
+                                className="p-2 text-indigo-400 hover:text-indigo-300 rounded-lg hover:bg-indigo-500/10 transition-colors"
+                                title="Add Material"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            )}
                             {canEdit(role, "chapters") && (
                               <button
                                 onClick={() => openChapterEdit(c)}
@@ -421,24 +440,33 @@ export default function SubjectDetailsPage() {
           )}
         </div>
 
-        {/* ===== RESOURCES SECTION ===== */}
+        {/* ===== MASTER MATERIALS SECTION ===== */}
         <div>
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-emerald-400" /> Study Materials
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-400" /> Subject Master Materials (Books, PYQs, Syllabus)
+            </h3>
+            {canEdit(role, "resources") && (
+              <button
+                onClick={() => openContextualResourceCreate(null)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg transition-all border border-emerald-500/20"
+              >
+                <Plus className="w-3 h-3" /> Add Master Material
+              </button>
+            )}
+          </div>
           <DataTable
             headers={[
               "Title",
-              "Linked To",
               "Category",
               "Price",
               "Actions",
             ]}
             emptyIcon={File}
-            emptyText="No resources uploaded yet."
-            rowCount={resources.length}
+            emptyText="No master materials uploaded yet."
+            rowCount={resources.filter((r) => !r.chapter_id).length}
           >
-            {resources.map((r) => (
+            {resources.filter((r) => !r.chapter_id).map((r) => (
               <tr
                 key={r.id}
                 className="group hover:bg-zinc-800/30 transition-colors"
@@ -477,14 +505,6 @@ export default function SubjectDetailsPage() {
                       )}
                     </div>
                   </div>
-                </td>
-                <td className="px-6 py-4 text-xs font-medium text-zinc-400">
-                  {r.chapter_id
-                    ? `CH ${
-                        chapters.find((c) => c.id === r.chapter_id)
-                          ?.chapter_number || "?"
-                      }`
-                    : "Subject Level"}
                 </td>
                 <td className="px-6 py-4">
                   <span className="text-[10px] font-bold text-zinc-300 bg-zinc-800 px-2.5 py-1 rounded-md border border-zinc-700">
@@ -673,46 +693,16 @@ export default function SubjectDetailsPage() {
                 </select>
               </div>
 
-              <div>
-                <label className={labelClass}>Resource Level</label>
-                <div className="flex gap-4 mb-3">
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="resource_level"
-                      checked={!formData.chapter_id}
-                      onChange={() => setFormData({ ...formData, chapter_id: "" })}
-                      className="text-indigo-600 bg-zinc-900 border-zinc-700"
-                    />
-                    Entire Subject (e.g. Full Book)
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="resource_level"
-                      checked={!!formData.chapter_id}
-                      onChange={() => setFormData({ ...formData, chapter_id: chapters[0]?.id || "" })}
-                      className="text-indigo-600 bg-zinc-900 border-zinc-700"
-                    />
-                    Specific Chapter
-                  </label>
-                </div>
-                
-                {formData.chapter_id !== undefined && formData.chapter_id !== "" && (
-                  <select
-                    className={inputClass}
-                    value={formData.chapter_id || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, chapter_id: e.target.value })
-                    }
-                  >
-                    {chapters.map((ch) => (
-                      <option key={ch.id} value={ch.id}>
-                        CH {ch.chapter_number}: {ch.title}
-                      </option>
-                    ))}
-                  </select>
-                )}
+              <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 flex flex-col gap-1">
+                <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Target Destination
+                </span>
+                <span className="text-sm font-medium text-white flex items-center gap-2 mt-1">
+                  <Bookmark className="w-4 h-4 text-indigo-400" />
+                  {formData.chapter_id
+                    ? `Chapter: ${chapters.find((c) => c.id === formData.chapter_id)?.title || "Unknown"}`
+                    : "Entire Subject (Master Material)"}
+                </span>
               </div>
 
               <div>
