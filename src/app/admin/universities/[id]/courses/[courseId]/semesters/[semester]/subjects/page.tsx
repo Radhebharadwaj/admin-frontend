@@ -77,10 +77,20 @@ export default function SubjectsPage() {
     )
       return;
     try {
-      const res = await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
-      if (!res.success) throw new Error(res.message);
+      await mutate(
+        async () => {
+          const res = await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
+          if (!res.success) throw new Error(res.message);
+          return subjects.filter((s) => s.id !== id);
+        },
+        {
+          optimisticData: subjects.filter((s) => s.id !== id),
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false,
+        }
+      );
       addToast("success", "Subject deleted successfully.");
-      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete subject.");
     }
@@ -95,14 +105,32 @@ export default function SubjectsPage() {
       const payload: any = { ...formData, semester };
       if (!editingId) payload.course_id = courseId;
 
-      const res = await fetchApi(url, {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.success) throw new Error(res.message);
+      const optimisticData = editingId
+        ? subjects.map((s) => (s.id === editingId ? { ...s, ...payload } : s))
+        : [{ ...payload, id: `temp-${Date.now()}` }, ...subjects];
+
+      await mutate(
+        async () => {
+          const res = await fetchApi(url, {
+            method: editingId ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!res.success) throw new Error(res.message);
+          
+          const fetchRes = await fetchApi(`/api/subjects?course_id=${courseId}&semester=${semester}`);
+          if (fetchRes.success) return fetchRes.data;
+          throw new Error("Failed to reload data");
+        },
+        {
+          optimisticData: optimisticData as Subject[],
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false,
+        }
+      );
+
       addToast("success", editingId ? "Subject updated successfully." : "Subject created successfully.");
-      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);

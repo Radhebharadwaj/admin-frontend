@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import useSWR from "swr";
 import Link from "next/link";
+import Image from "next/image";
 import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
@@ -75,10 +76,20 @@ export default function UniversitiesPage() {
     if (!confirm(`Are you sure you want to delete "${name}"? This will cascade-delete all courses, subjects, chapters, and resources under it.`))
       return;
     try {
-      const res = await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
-      if (!res.success) throw new Error(res.message);
+      await mutate(
+        async () => {
+          const res = await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
+          if (!res.success) throw new Error(res.message);
+          return universities.filter((u) => u.id !== id);
+        },
+        {
+          optimisticData: universities.filter((u) => u.id !== id),
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false,
+        }
+      );
       addToast("success", "University deleted successfully.");
-      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete university.");
     }
@@ -88,18 +99,36 @@ export default function UniversitiesPage() {
     e.preventDefault();
     setFormLoading(true);
     setError("");
+    
+    const url = editingId ? `/api/universities/${editingId}` : "/api/universities";
+    const optimisticData = editingId
+      ? universities.map((u) => (u.id === editingId ? { ...u, ...formData } : u))
+      : [{ ...formData, id: `temp-${Date.now()}` }, ...universities];
+
     try {
-      const url = editingId
-        ? `/api/universities/${editingId}`
-        : "/api/universities";
-      const res = await fetchApi(url, {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      if (!res.success) throw new Error(res.message);
+      await mutate(
+        async () => {
+          const res = await fetchApi(url, {
+            method: editingId ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+          });
+          if (!res.success) throw new Error(res.message);
+          
+          // Re-fetch to get accurate DB values (like formatted slugs, default values)
+          const fetchRes = await fetchApi("/api/universities");
+          if (fetchRes.success) return fetchRes.data;
+          throw new Error("Failed to reload data");
+        },
+        {
+          optimisticData: optimisticData as University[],
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false, // We already fetched the latest in the promise above
+        }
+      );
+
       addToast("success", editingId ? "University updated successfully." : "University created successfully.");
-      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
@@ -192,12 +221,15 @@ export default function UniversitiesPage() {
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   {u.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={u.logo_url}
-                      alt={u.name}
-                      className="w-9 h-9 rounded-lg object-cover border border-zinc-700"
-                    />
+                    <div className="relative w-9 h-9 rounded-lg overflow-hidden border border-zinc-700 shrink-0">
+                      <Image
+                        src={u.logo_url}
+                        alt={u.name}
+                        fill
+                        sizes="36px"
+                        className="object-cover"
+                      />
+                    </div>
                   ) : (
                     <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
                       <GraduationCap className="w-4 h-4" />

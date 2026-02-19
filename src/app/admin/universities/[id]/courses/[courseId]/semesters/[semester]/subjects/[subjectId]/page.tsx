@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import useSWR from "swr";
+import Image from "next/image";
 import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
@@ -129,11 +130,36 @@ export default function SubjectDetailsPage() {
   const handleDelete = async (type: string, id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This is permanent.`)) return;
     try {
-      const res = await fetchApi(`/api/${type}/${id}`, { method: "DELETE" });
-      if (!res.success) throw new Error(res.message);
+      if (type === "chapters") {
+        await mutateChapters(
+          async () => {
+            const res = await fetchApi(`/api/${type}/${id}`, { method: "DELETE" });
+            if (!res.success) throw new Error(res.message);
+            return chapters.filter((c) => c.id !== id);
+          },
+          {
+            optimisticData: chapters.filter((c) => c.id !== id),
+            rollbackOnError: true,
+            populateCache: true,
+            revalidate: false,
+          }
+        );
+      } else {
+        await mutateResources(
+          async () => {
+            const res = await fetchApi(`/api/${type}/${id}`, { method: "DELETE" });
+            if (!res.success) throw new Error(res.message);
+            return resources.filter((r) => r.id !== id);
+          },
+          {
+            optimisticData: resources.filter((r) => r.id !== id),
+            rollbackOnError: true,
+            populateCache: true,
+            revalidate: false,
+          }
+        );
+      }
       addToast("success", "Deleted successfully.");
-      if (type === "chapters") mutateChapters();
-      else mutateResources();
     } catch (err: any) {
       addToast("error", err.message || `Failed to delete ${type}.`);
     }
@@ -152,14 +178,31 @@ export default function SubjectDetailsPage() {
           unit_name: formData.unit_name || null,
         };
         if (!editingId) payload.subject_id = subjectId;
-        const res = await fetchApi(url, {
-          method: editingId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.success) throw new Error(res.message);
+
+        const optimisticData = editingId
+          ? chapters.map((c) => (c.id === editingId ? { ...c, ...payload } : c))
+          : [{ ...payload, id: `temp-${Date.now()}` }, ...chapters];
+
+        await mutateChapters(
+          async () => {
+            const res = await fetchApi(url, {
+              method: editingId ? "PATCH" : "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.success) throw new Error(res.message);
+            const fetchRes = await fetchApi(`/api/chapters?subject_id=${subjectId}`);
+            if (fetchRes.success) return fetchRes.data;
+            throw new Error("Failed to reload data");
+          },
+          {
+            optimisticData: optimisticData as Chapter[],
+            rollbackOnError: true,
+            populateCache: true,
+            revalidate: false,
+          }
+        );
         addToast("success", "Saved successfully.");
-        mutateChapters();
       } else {
         const url = editingId
           ? `/api/resources/${editingId}`
@@ -174,14 +217,31 @@ export default function SubjectDetailsPage() {
           description: formData.description || null,
         };
         if (!editingId) payload.subject_id = subjectId;
-        const res = await fetchApi(url, {
-          method: editingId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.success) throw new Error(res.message);
+
+        const optimisticData = editingId
+          ? resources.map((r) => (r.id === editingId ? { ...r, ...payload } : r))
+          : [{ ...payload, id: `temp-${Date.now()}` }, ...resources];
+
+        await mutateResources(
+          async () => {
+            const res = await fetchApi(url, {
+              method: editingId ? "PATCH" : "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            if (!res.success) throw new Error(res.message);
+            const fetchRes = await fetchApi(`/api/resources?subject_id=${subjectId}`);
+            if (fetchRes.success) return fetchRes.data;
+            throw new Error("Failed to reload data");
+          },
+          {
+            optimisticData: optimisticData as Resource[],
+            rollbackOnError: true,
+            populateCache: true,
+            revalidate: false,
+          }
+        );
         addToast("success", "Saved successfully.");
-        mutateResources();
       }
       setDrawerOpen(false);
     } catch (err: any) {
@@ -370,12 +430,15 @@ export default function SubjectDetailsPage() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {r.thumbnail_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={r.thumbnail_url}
-                        alt={r.title}
-                        className="w-9 h-12 rounded-md object-cover border border-zinc-700"
-                      />
+                      <div className="relative w-9 h-12 rounded-md overflow-hidden border border-zinc-700 shrink-0">
+                        <Image
+                          src={r.thumbnail_url}
+                          alt={r.title}
+                          fill
+                          sizes="36px"
+                          className="object-cover"
+                        />
+                      </div>
                     ) : (
                       <div className="w-9 h-12 rounded-md bg-zinc-800/50 border border-zinc-700 flex items-center justify-center text-zinc-500">
                         <FileText className="w-4 h-4" />
