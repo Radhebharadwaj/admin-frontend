@@ -30,6 +30,7 @@ interface Subject {
   semester: number;
   name: string;
   subject_code: string;
+  search_aliases?: string;
 }
 
 export default function SubjectsPage() {
@@ -326,6 +327,21 @@ export default function SubjectsPage() {
               placeholder="Data Structures & Algorithms"
               required
             />
+          </div>
+
+          {/* Search Aliases */}
+          <div>
+            <label className={labelClass}>Search Aliases (Optional)</label>
+            <input
+              type="text"
+              className={inputClass}
+              value={formData.search_aliases || ""}
+              onChange={(e) => setFormData({ ...formData, search_aliases: e.target.value })}
+              placeholder="e.g. DSA, Data Structures"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Comma-separated terms for better search.
+            </p>
           </div>
 
           <div className="pt-6 mt-6 border-t border-zinc-800 flex justify-end gap-3">

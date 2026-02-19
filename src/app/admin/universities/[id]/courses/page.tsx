@@ -39,6 +39,7 @@ interface Course {
   slug: string;
   duration_years: number | null;
   total_semesters: number;
+  search_aliases?: string;
   is_active: number;
 }
 
@@ -418,6 +419,21 @@ export default function CoursesPage() {
                 required
               />
             </div>
+          </div>
+
+          {/* Search Aliases */}
+          <div>
+            <label className={labelClass}>Search Aliases (Optional)</label>
+            <input
+              type="text"
+              className={inputClass}
+              value={formData.search_aliases || ""}
+              onChange={(e) => setFormData({ ...formData, search_aliases: e.target.value })}
+              placeholder="e.g. BCA, Bachelor of Computer Applications"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Comma-separated terms for better search.
+            </p>
           </div>
 
           {/* Is Active Toggle */}
