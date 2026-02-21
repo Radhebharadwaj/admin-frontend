@@ -34,7 +34,7 @@ interface University {
 
 export default function UniversitiesPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
   // Data
@@ -85,8 +85,14 @@ export default function UniversitiesPage() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"? This will cascade-delete all courses, subjects, chapters, and resources under it.`))
       return;
-    await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
-    await fetchUniversities();
+    try {
+      const res = await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
+      if (!res.success) throw new Error(res.message);
+      addToast("success", "University deleted successfully.");
+      await fetchUniversities();
+    } catch (err: any) {
+      addToast("error", err.message || "Failed to delete university.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -103,10 +109,12 @@ export default function UniversitiesPage() {
         body: JSON.stringify(formData),
       });
       if (!res.success) throw new Error(res.message);
+      addToast("success", editingId ? "University updated successfully." : "University created successfully.");
       await fetchUniversities();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", err.message || "Failed to save university.");
     }
     setFormLoading(false);
   };

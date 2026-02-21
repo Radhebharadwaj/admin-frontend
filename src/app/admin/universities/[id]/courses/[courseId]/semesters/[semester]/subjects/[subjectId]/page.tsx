@@ -59,7 +59,7 @@ export default function SubjectDetailsPage() {
   const courseId = params.courseId as string;
   const semester = params.semester as string;
   const subjectId = params.subjectId as string;
-  const { user } = useAuthStore();
+  const { user, addToast } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
   // Context for breadcrumb
@@ -152,8 +152,14 @@ export default function SubjectDetailsPage() {
 
   const handleDelete = async (entity: string, id: string, name: string) => {
     if (!confirm(`Delete "${name}"? This is permanent.`)) return;
-    await fetchApi(`/api/${entity}/${id}`, { method: "DELETE" });
-    await fetchData();
+    try {
+      const res = await fetchApi(`/api/${entity}/${id}`, { method: "DELETE" });
+      if (!res.success) throw new Error(res.message);
+      addToast("success", `${entity === "chapters" ? "Chapter" : "Resource"} deleted successfully.`);
+      await fetchData();
+    } catch (err: any) {
+      addToast("error", err.message || `Failed to delete ${entity}.`);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -175,6 +181,7 @@ export default function SubjectDetailsPage() {
           body: JSON.stringify(payload),
         });
         if (!res.success) throw new Error(res.message);
+        addToast("success", editingId ? "Chapter updated successfully." : "Chapter created successfully.");
       } else {
         const url = editingId
           ? `/api/resources/${editingId}`
@@ -195,11 +202,13 @@ export default function SubjectDetailsPage() {
           body: JSON.stringify(payload),
         });
         if (!res.success) throw new Error(res.message);
+        addToast("success", editingId ? "Resource updated successfully." : "Resource created successfully.");
       }
       await fetchData();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
+      addToast("error", err.message || "Failed to save.");
     }
     setFormLoading(false);
   };

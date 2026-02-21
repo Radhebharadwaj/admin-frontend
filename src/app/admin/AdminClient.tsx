@@ -64,8 +64,7 @@ export default function AdminClient() {
         </Link>
 
         {/* Card 2: Courses */}
-        <Link 
-          href="/admin/universities" 
+        <div 
           className="group relative p-6 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl shadow-sm hover:shadow-blue-500/10 hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -80,11 +79,10 @@ export default function AdminClient() {
             </div>
             <p className="text-4xl font-bold tracking-tight text-white">{stats.courses}</p>
           </div>
-        </Link>
+        </div>
 
         {/* Card 3: Subjects */}
-        <Link 
-          href="/admin/subjects" 
+        <div 
           className="group relative p-6 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl shadow-sm hover:shadow-amber-500/10 hover:border-amber-500/40 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -99,12 +97,11 @@ export default function AdminClient() {
             </div>
             <p className="text-4xl font-bold tracking-tight text-white">{stats.subjects}</p>
           </div>
-        </Link>
+        </div>
 
         {/* Card 4: Team Members (Conditional) */}
         {isSuperAdmin && (
-          <Link 
-            href="/admin/team" 
+          <div 
             className="group relative p-6 bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-2xl shadow-sm hover:shadow-fuchsia-500/10 hover:border-fuchsia-500/40 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -119,7 +116,7 @@ export default function AdminClient() {
               </div>
               <p className="text-4xl font-bold tracking-tight text-white">{stats.teamMembers || 0}</p>
             </div>
-          </Link>
+          </div>
         )}
 
         {/* Card 5: Total Sales (Conditional) - Spans 2 columns if on large screens to fit Bento style */}
