@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@tiptap/react', '@tiptap/starter-kit', '@tiptap/extension-placeholder'],
+  },
 };
 
 export default nextConfig;

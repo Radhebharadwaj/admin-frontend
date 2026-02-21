@@ -25,7 +25,12 @@ import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import ImageUploader from "@/components/admin/ImageUploader";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
-import TiptapEditor from "@/components/admin/TiptapEditor";
+import dynamic from 'next/dynamic';
+
+const TiptapEditor = dynamic(() => import("@/components/admin/TiptapEditor"), {
+  ssr: false,
+  loading: () => <div className="h-[500px] w-full bg-zinc-900 border border-zinc-800 rounded-xl animate-pulse"></div>
+});
 
 // ===== TYPES =====
 interface Chapter {
