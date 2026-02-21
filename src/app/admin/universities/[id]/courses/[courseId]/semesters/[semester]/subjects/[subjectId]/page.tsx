@@ -1,7 +1,7 @@
 "use client";
 export const runtime = "edge";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useParams } from "next/navigation";
 import {
   Bookmark,
@@ -14,6 +14,9 @@ import {
   ExternalLink,
   Lock,
   UploadCloud,
+  ChevronDown,
+  ChevronRight,
+  Eye,
 } from "lucide-react";
 import useSWR from "swr";
 import Image from "next/image";
@@ -87,6 +90,12 @@ export default function SubjectDetailsPage() {
   const { data: subData } = useSWR(`/api/subjects/${subjectId}`, swrFetcher);
   const { data: chapters = [], error: chError, mutate: mutateChapters } = useSWR<Chapter[]>(`/api/chapters?subject_id=${subjectId}`, swrFetcher);
   const { data: resources = [], error: resError, isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
+
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
+
+  const toggleChapter = (id: string) => {
+    setExpandedChapters(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const univName = uniData?.name || "";
   const courseName = courseData?.name || "";
@@ -452,71 +461,131 @@ export default function SubjectDetailsPage() {
                     emptyIcon={Bookmark}
                     emptyText="No chapters"
                   >
-                    {group.items.map((c) => (
-                      <tr
-                        key={c.id}
-                        className="group hover:bg-zinc-800/30 transition-colors"
-                      >
-                        <td className="px-6 py-4 w-24 align-middle">
-                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-md bg-zinc-800/50 border border-zinc-700 text-zinc-300 text-xs font-semibold tracking-wide">
-                            CH {c.chapter_number}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-white align-middle">
-                          <div className="flex flex-col gap-2">
-                            <span>{c.title}</span>
-                            {resources.filter((r) => r.chapter_id === c.id).length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                {resources
-                                  .filter((r) => r.chapter_id === c.id)
-                                  .map((r) => (
-                                    <button
-                                      key={r.id}
-                                      onClick={() => openResourceEdit(r)}
-                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-medium hover:bg-indigo-500/20 transition-colors text-left"
-                                    >
-                                      <FileText className="w-3 h-3 shrink-0" />
-                                      <span className="truncate max-w-[150px]">{r.title}</span>
-                                    </button>
-                                  ))}
+                    {group.items.map((c) => {
+                      const chapterResources = resources.filter((r) => r.chapter_id === c.id);
+                      const isExpanded = !!expandedChapters[c.id];
+                      
+                      // Group resources by category
+                      const groupedResources = chapterResources.reduce<Record<string, Resource[]>>((acc, r) => {
+                        const cat = r.category;
+                        if (!acc[cat]) acc[cat] = [];
+                        acc[cat].push(r);
+                        return acc;
+                      }, {});
+
+                      return (
+                        <Fragment key={c.id}>
+                          <tr
+                            className="group hover:bg-zinc-800/30 transition-colors cursor-pointer"
+                            onClick={() => toggleChapter(c.id)}
+                          >
+                            <td className="px-6 py-4 w-24 align-middle">
+                              <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-md bg-zinc-800/50 border border-zinc-700 text-zinc-300 text-xs font-semibold tracking-wide">
+                                CH {c.chapter_number}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-semibold text-white align-middle">
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? <ChevronDown className="w-4 h-4 text-zinc-400" /> : <ChevronRight className="w-4 h-4 text-zinc-400" />}
+                                <span>{c.title}</span>
+                                <span className="text-xs text-zinc-500 font-normal px-2 py-0.5 bg-zinc-800/50 rounded-full border border-zinc-700/50">
+                                  {chapterResources.length} item{chapterResources.length !== 1 ? 's' : ''}
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-right align-middle">
-                          <div className="flex items-center justify-end gap-1">
-                            {canEdit(role, "resources") && (
-                              <button
-                                onClick={() => openContextualResourceCreate(c.id)}
-                                className="p-2 text-indigo-400 hover:text-indigo-300 rounded-lg hover:bg-indigo-500/10 transition-colors"
-                                title="Add Material"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </button>
-                            )}
-                            {canEdit(role, "chapters") && (
-                              <button
-                                onClick={() => openChapterEdit(c)}
-                                className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"
-                                title="Edit Chapter"
-                              >
-                                <Pencil className="w-4 h-4" />
-                              </button>
-                            )}
-                            {canDelete(role, "chapters") && (
-                              <button
-                                onClick={() =>
-                                  handleDelete("chapters", c.id, c.title)
-                                }
-                                className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            </td>
+                            <td className="px-6 py-4 text-right align-middle" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                {canEdit(role, "resources") && (
+                                  <button
+                                    onClick={() => openContextualResourceCreate(c.id)}
+                                    className="p-2 text-indigo-400 hover:text-indigo-300 rounded-lg hover:bg-indigo-500/10 transition-colors"
+                                    title="Add Material"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {canEdit(role, "chapters") && (
+                                  <button
+                                    onClick={() => openChapterEdit(c)}
+                                    className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"
+                                    title="Edit Chapter"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {canDelete(role, "chapters") && (
+                                  <button
+                                    onClick={() =>
+                                      handleDelete("chapters", c.id, c.title)
+                                    }
+                                    className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded && chapterResources.length > 0 && (
+                            <tr>
+                              <td colSpan={3} className="px-6 py-6 bg-zinc-900/50 border-t border-zinc-800/50">
+                                <div className="space-y-6">
+                                  {Object.entries(groupedResources).map(([category, resList]) => (
+                                    <div key={category}>
+                                      <h4 className="text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">
+                                        {categoryOptions.find((o) => o.value === category)?.label || category}
+                                      </h4>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        {resList.map((r) => (
+                                          <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
+                                            {r.thumbnail_url ? (
+                                              <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
+                                                <Image src={r.thumbnail_url} alt={r.title} fill className="object-cover" />
+                                              </div>
+                                            ) : (
+                                              <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
+                                                <FileText className="w-8 h-8" />
+                                              </div>
+                                            )}
+                                            <div className="p-3 flex flex-col flex-1 justify-between">
+                                              <h5 className="text-sm font-semibold text-zinc-200 line-clamp-1">{r.title}</h5>
+                                              <div className="flex items-center justify-between mt-4">
+                                                <div className="flex gap-1">
+                                                  {canEdit(role, "resources") && (
+                                                    <button onClick={() => openResourceEdit(r)} className="p-1.5 text-zinc-500 hover:text-white rounded-md hover:bg-zinc-800 transition-colors" title="Edit">
+                                                      <Pencil className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  )}
+                                                  {canDelete(role, "resources") && (
+                                                    <button onClick={() => handleDelete("resources", r.id, r.title)} className="p-1.5 text-zinc-500 hover:text-red-400 rounded-md hover:bg-red-500/10 transition-colors" title="Delete">
+                                                      <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                  )}
+                                                </div>
+                                                <button onClick={() => window.open(`/read/${r.id}`, '_blank')} className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 rounded-md text-xs font-semibold transition-colors">
+                                                  <Eye className="w-3.5 h-3.5" /> Preview
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {isExpanded && chapterResources.length === 0 && (
+                            <tr>
+                              <td colSpan={3} className="px-6 py-8 bg-zinc-900/50 text-center border-t border-zinc-800/50 text-sm text-zinc-500 font-medium">
+                                No resources found for this chapter.
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                   </DataTable>
                 </div>
               ))}
