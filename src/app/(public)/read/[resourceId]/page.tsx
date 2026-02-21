@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useRazorpay } from "@/lib/useRazorpay";
 import { useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
-import html2pdf from "html2pdf.js";
 
 interface Resource {
   id: string;
@@ -61,6 +60,7 @@ export default function UniversalReaderPage() {
     if (!contentRef.current || !resource) return;
     setIsDownloading(true);
     try {
+      const html2pdf = (await import("html2pdf.js")).default;
       const opt: any = {
         margin: 1,
         filename: `${resource.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
