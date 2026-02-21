@@ -137,11 +137,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Admin User</p>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{role}</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-white">{user?.member_name || user?.email || "Admin User"}</p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 font-bold">{role.replace("_", " ")}</p>
             </div>
             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm">
-              A
+              {(user?.member_name || user?.email || "A").charAt(0).toUpperCase()}
             </div>
           </div>
         </header>
