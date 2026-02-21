@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Layers, Loader2, BookOpen } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import useSWR from "swr";
+import Link from "next/link";
+import { Layers, Loader2 } from "lucide-react";
+import { swrFetcher } from "@/lib/api";
 import Breadcrumb from "@/components/admin/Breadcrumb";
 
 interface SemesterInfo {
@@ -17,37 +19,27 @@ export default function SemestersPage() {
   const universityId = params.id as string;
   const courseId = params.courseId as string;
 
-  const [univName, setUnivName] = useState("");
-  const [courseName, setCourseName] = useState("");
-  const [totalSemesters, setTotalSemesters] = useState(0);
-  const [semesters, setSemesters] = useState<SemesterInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: uniData, error: uniError } = useSWR(`/api/universities/${universityId}`, swrFetcher);
+  const { data: courseData, error: courseError } = useSWR(`/api/courses/${courseId}`, swrFetcher);
+  const { data: semesters = [], error: semError, isLoading: loading } = useSWR<SemesterInfo[]>(`/api/subjects/semesters?course_id=${courseId}`, swrFetcher);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [uniRes, courseRes, semRes] = await Promise.all([
-      fetchApi(`/api/universities/${universityId}`),
-      fetchApi(`/api/courses/${courseId}`),
-      fetchApi(`/api/subjects/semesters?course_id=${courseId}`),
-    ]);
-    if (uniRes.success) setUnivName(uniRes.data.name);
-    if (courseRes.success) {
-      setCourseName(courseRes.data.name);
-      setTotalSemesters(courseRes.data.total_semesters);
-    }
-    if (semRes.success) setSemesters(semRes.data);
-    setLoading(false);
-  }, [universityId, courseId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const univName = uniData?.name || "";
+  const courseName = courseData?.name || "";
+  const totalSemesters = courseData?.total_semesters || 0;
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
         <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
         <p className="text-sm font-medium">Loading semesters...</p>
+      </div>
+    );
+  }
+
+  if (uniError || courseError || semError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 text-red-500">
+        <p className="text-sm font-medium">Failed to load data.</p>
       </div>
     );
   }
@@ -84,13 +76,9 @@ export default function SemestersPage() {
           const hasSubjects = count > 0;
 
           return (
-            <button
+            <Link
               key={sem}
-              onClick={() =>
-                router.push(
-                  `/admin/universities/${universityId}/courses/${courseId}/semesters/${sem}/subjects`
-                )
-              }
+              href={`/admin/universities/${universityId}/courses/${courseId}/semesters/${sem}/subjects`}
               className={`group relative flex flex-col items-center justify-center p-8 rounded-2xl border transition-all duration-300 hover:-translate-y-1 ${
                 hasSubjects
                   ? "bg-zinc-900/60 border-zinc-700 hover:border-indigo-500/40 hover:bg-zinc-800/80 hover:shadow-indigo-500/10 hover:shadow-lg"
@@ -116,7 +104,7 @@ export default function SemestersPage() {
               >
                 {hasSubjects ? `${count} Subject${count > 1 ? "s" : ""}` : "Empty"}
               </p>
-            </button>
+            </Link>
           );
         })}
       </div>

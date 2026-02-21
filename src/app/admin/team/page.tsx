@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import useSWR from "swr";
 import { Crown, Shield, Edit3, User, Plus, X } from "lucide-react";
-import { fetchApi } from "@/lib/api";
+import { swrFetcher } from "@/lib/api";
 
 interface TeamMember {
   id: string;
@@ -54,24 +54,7 @@ function MemberCard({ member }: { member: TeamMember }) {
 }
 
 export default function TeamAdminPage() {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  const loadTeam = async () => {
-    setLoading(true);
-    const res = await fetchApi("/api/team");
-    if (res.success) {
-      setMembers(res.data);
-    } else {
-      setError(res.message);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadTeam();
-  }, []);
+  const { data: members = [], isLoading: loading, error: fetchError } = useSWR<TeamMember[]>("/api/team", swrFetcher);
 
   if (loading) {
     return (
@@ -81,10 +64,10 @@ export default function TeamAdminPage() {
     );
   }
 
-  if (error) {
+  if (fetchError) {
     return (
       <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-center">
-        {error}
+        Failed to load team data.
       </div>
     );
   }
