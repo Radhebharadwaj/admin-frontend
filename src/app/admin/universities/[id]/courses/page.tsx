@@ -1,17 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
-  GraduationCap,
+  BookOpen,
   Plus,
   Trash2,
   MoreHorizontal,
   Loader2,
   Search,
   X,
-  Globe,
-  ExternalLink,
+  Clock,
+  Layers,
 } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
@@ -20,46 +20,58 @@ import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
-import ImageUploader from "@/components/admin/ImageUploader";
 
 // ===== TYPES =====
 interface University {
   id: string;
   name: string;
   slug: string;
-  website_url: string | null;
-  logo_url: string | null;
+}
+interface Course {
+  id: string;
+  university_id: string;
+  name: string;
+  slug: string;
+  duration_years: number | null;
+  total_semesters: number;
   is_active: number;
 }
 
-export default function UniversitiesPage() {
+export default function CoursesPage() {
   const router = useRouter();
+  const params = useParams();
+  const universityId = params.id as string;
   const { user } = useAuthStore();
   const role = (user?.role || "GUEST") as Role;
 
   // Data
-  const [universities, setUniversities] = useState<University[]>([]);
+  const [university, setUniversity] = useState<University | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<University>>({});
+  const [formData, setFormData] = useState<Partial<Course>>({});
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
 
   // ===== Data Fetching =====
-  const fetchUniversities = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    const res = await fetchApi("/api/universities");
-    if (res.success) setUniversities(res.data);
+    const [uniRes, coursesRes] = await Promise.all([
+      fetchApi(`/api/universities/${universityId}`),
+      fetchApi(`/api/courses?university_id=${universityId}`),
+    ]);
+    if (uniRes.success) setUniversity(uniRes.data);
+    if (coursesRes.success) setCourses(coursesRes.data);
     setLoading(false);
-  }, []);
+  }, [universityId]);
 
   useEffect(() => {
-    fetchUniversities();
-  }, [fetchUniversities]);
+    fetchData();
+  }, [fetchData]);
 
   // ===== Helpers =====
   const autoSlug = (str: string) =>
@@ -70,23 +82,33 @@ export default function UniversitiesPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData({ name: "", slug: "", website_url: "", logo_url: null, is_active: 1 });
+    setFormData({
+      name: "",
+      slug: "",
+      duration_years: null,
+      total_semesters: undefined,
+      is_active: 1,
+    });
     setError("");
     setDrawerOpen(true);
   };
 
-  const openEdit = (u: University) => {
-    setEditingId(u.id);
-    setFormData({ ...u });
+  const openEdit = (c: Course) => {
+    setEditingId(c.id);
+    setFormData({ ...c });
     setError("");
     setDrawerOpen(true);
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This will cascade-delete all courses, subjects, chapters, and resources under it.`))
+    if (
+      !confirm(
+        `Are you sure you want to delete "${name}"? This will cascade-delete all subjects, chapters, and resources under it.`
+      )
+    )
       return;
-    await fetchApi(`/api/universities/${id}`, { method: "DELETE" });
-    await fetchUniversities();
+    await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
+    await fetchData();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,16 +116,23 @@ export default function UniversitiesPage() {
     setFormLoading(true);
     setError("");
     try {
-      const url = editingId
-        ? `/api/universities/${editingId}`
-        : "/api/universities";
+      const url = editingId ? `/api/courses/${editingId}` : "/api/courses";
+      const payload: any = {
+        ...formData,
+        duration_years: formData.duration_years
+          ? parseInt(String(formData.duration_years))
+          : null,
+        total_semesters: parseInt(String(formData.total_semesters)),
+      };
+      if (!editingId) payload.university_id = universityId;
+
       const res = await fetchApi(url, {
         method: editingId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       if (!res.success) throw new Error(res.message);
-      await fetchUniversities();
+      await fetchData();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);
@@ -112,10 +141,10 @@ export default function UniversitiesPage() {
   };
 
   // ===== Filtered List =====
-  const filtered = universities.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.slug.toLowerCase().includes(search.toLowerCase())
+  const filtered = courses.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.slug.toLowerCase().includes(search.toLowerCase())
   );
 
   // ===== Styles =====
@@ -126,25 +155,30 @@ export default function UniversitiesPage() {
 
   return (
     <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-500">
-      <Breadcrumb items={[{ label: "Universities" }]} />
+      <Breadcrumb
+        items={[
+          { label: "Universities", href: "/admin/universities" },
+          { label: university?.name || "Loading..." },
+        ]}
+      />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
-            Universities
+            {university?.name || "..."} — Courses
           </h1>
           <p className="text-sm text-zinc-400 mt-1.5 font-medium">
-            Manage parent institutions and academies.
+            Manage degree programs and certificates under this university.
           </p>
         </div>
 
-        {canEdit(role, "universities") && (
+        {canEdit(role, "courses") && (
           <button
             onClick={openCreate}
             className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95"
           >
-            <Plus className="w-4 h-4" /> Add University
+            <Plus className="w-4 h-4" /> Add Course
           </button>
         )}
       </div>
@@ -156,7 +190,7 @@ export default function UniversitiesPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search universities..."
+          placeholder="Search courses..."
           className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all shadow-sm"
         />
         {search && (
@@ -173,70 +207,65 @@ export default function UniversitiesPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
           <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-          <p className="text-sm font-medium">Loading universities...</p>
+          <p className="text-sm font-medium">Loading courses...</p>
         </div>
       ) : (
         <DataTable
-          headers={["University", "Website", "Status", "Actions"]}
-          emptyIcon={GraduationCap}
-          emptyText="No universities found. Create one to get started."
+          headers={["Course", "Duration", "Semesters", "Status", "Actions"]}
+          emptyIcon={BookOpen}
+          emptyText="No courses found. Create one to get started."
           rowCount={filtered.length}
         >
-          {filtered.map((u) => (
+          {filtered.map((c) => (
             <tr
-              key={u.id}
+              key={c.id}
               className="group hover:bg-zinc-800/30 transition-colors cursor-pointer"
-              onClick={() => router.push(`/admin/universities/${u.id}/courses`)}
+              onClick={() =>
+                router.push(
+                  `/admin/universities/${universityId}/courses/${c.id}/semesters`
+                )
+              }
             >
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  {u.logo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={u.logo_url}
-                      alt={u.name}
-                      className="w-9 h-9 rounded-lg object-cover border border-zinc-700"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                  )}
+                  <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
                   <div>
-                    <div className="font-semibold text-white text-sm">{u.name}</div>
-                    <div className="text-xs text-zinc-500 font-mono mt-0.5">{u.slug}</div>
+                    <div className="font-semibold text-white text-sm">
+                      {c.name}
+                    </div>
+                    <div className="text-xs text-zinc-500 font-mono mt-0.5">
+                      {c.slug}
+                    </div>
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4 text-sm text-zinc-400">
-                {u.website_url ? (
-                  <a
-                    href={u.website_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors"
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span className="truncate max-w-[180px]">
-                      {u.website_url.replace(/^https?:\/\//, "")}
-                    </span>
-                    <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </a>
-                ) : (
-                  "—"
-                )}
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-1.5 text-sm text-zinc-400">
+                  <Clock className="w-3.5 h-3.5" />
+                  {c.duration_years ? `${c.duration_years} Years` : "—"}
+                </div>
               </td>
               <td className="px-6 py-4">
-                <StatusBadge active={u.is_active === 1} />
+                <div className="flex items-center gap-1.5 text-sm text-zinc-400">
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="font-medium text-white">
+                    {c.total_semesters}
+                  </span>{" "}
+                  semesters
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <StatusBadge active={c.is_active === 1} />
               </td>
               <td className="px-6 py-4 text-right">
                 <div className="flex items-center justify-end gap-1">
-                  {canEdit(role, "universities") && (
+                  {canEdit(role, "courses") && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        openEdit(u);
+                        openEdit(c);
                       }}
                       className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"
                       title="Edit"
@@ -244,11 +273,11 @@ export default function UniversitiesPage() {
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                   )}
-                  {canDelete(role, "universities") && (
+                  {canDelete(role, "courses") && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(u.id, u.name);
+                        handleDelete(c.id, c.name);
                       }}
                       className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                       title="Delete"
@@ -265,7 +294,7 @@ export default function UniversitiesPage() {
 
       {/* ===== CREATE / EDIT DRAWER ===== */}
       <SlideOverDrawer
-        title={editingId ? "Edit University" : "Create University"}
+        title={editingId ? "Edit Course" : "Create Course"}
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
       >
@@ -276,18 +305,9 @@ export default function UniversitiesPage() {
             </div>
           )}
 
-          {/* Logo Upload */}
-          <ImageUploader
-            value={formData.logo_url || null}
-            onChange={(url) => setFormData({ ...formData, logo_url: url })}
-            folder="logos"
-            label="University Logo"
-            placeholder="Drag and drop logo or click to upload"
-          />
-
           {/* Name */}
           <div>
-            <label className={labelClass}>University Name</label>
+            <label className={labelClass}>Course Name</label>
             <input
               type="text"
               className={inputClass}
@@ -299,7 +319,7 @@ export default function UniversitiesPage() {
                   slug: editingId ? formData.slug : autoSlug(e.target.value),
                 })
               }
-              placeholder="e.g. Indira Gandhi National Open University"
+              placeholder="e.g. Bachelor of Computer Applications"
               required
             />
           </div>
@@ -311,24 +331,55 @@ export default function UniversitiesPage() {
               type="text"
               className={`${inputClass} font-mono`}
               value={formData.slug || ""}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              placeholder="ignou"
+              onChange={(e) =>
+                setFormData({ ...formData, slug: e.target.value })
+              }
+              placeholder="bca"
               required
             />
           </div>
 
-          {/* Website */}
-          <div>
-            <label className={labelClass}>Website URL</label>
-            <input
-              type="url"
-              className={inputClass}
-              value={formData.website_url || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, website_url: e.target.value })
-              }
-              placeholder="https://ignou.ac.in"
-            />
+          {/* Duration & Semesters */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Duration (Years)</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                className={inputClass}
+                value={formData.duration_years || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    duration_years: e.target.value
+                      ? parseInt(e.target.value)
+                      : null,
+                  })
+                }
+                placeholder="3"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>
+                Total Semesters <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="16"
+                className={inputClass}
+                value={formData.total_semesters || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    total_semesters: parseInt(e.target.value) || undefined,
+                  })
+                }
+                placeholder="6"
+                required
+              />
+            </div>
           </div>
 
           {/* Is Active Toggle */}
@@ -336,7 +387,7 @@ export default function UniversitiesPage() {
             <div>
               <p className="text-sm font-medium text-white">Active Status</p>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Hidden universities won't appear in the student UI.
+                Hidden courses won't appear in the student UI.
               </p>
             </div>
             <button
@@ -373,8 +424,10 @@ export default function UniversitiesPage() {
               disabled={formLoading}
               className="px-5 py-2.5 rounded-xl text-sm font-bold bg-white text-black hover:bg-zinc-200 transition-all disabled:opacity-50 flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
             >
-              {formLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {editingId ? "Save Changes" : "Create University"}
+              {formLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : null}
+              {editingId ? "Save Changes" : "Create Course"}
             </button>
           </div>
         </form>
