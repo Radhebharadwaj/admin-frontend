@@ -533,7 +533,7 @@ export default function SubjectDetailsPage() {
                                   {Object.entries(groupedResources).map(([category, resList]) => (
                                     <div key={category}>
                                       <h4 className="text-xs font-bold tracking-widest text-zinc-400 uppercase mb-3">
-                                        {categoryOptions.find((o) => o.value === category)?.label || category}
+                                        {CATEGORIES.find((o) => o.value === category)?.label || category}
                                       </h4>
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                         {resList.map((r) => (
