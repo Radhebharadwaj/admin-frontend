@@ -258,7 +258,7 @@ export default function UniversitiesPage() {
         mockForm.append("sessionYear", formData.session_year || new Date().getFullYear().toString());
         mockForm.append("price", formData.price_in_inr || "0");
         
-        const res = await fetchApi("/api/upload", { method: "POST", body: mockForm }, true); // true = isFormData
+        const res = await fetchApi("/api/upload", { method: "POST", body: mockForm });
         if (!res.success) throw new Error(res.message || "Upload failed");
         await fetchResources(view.subjectId);
       }
