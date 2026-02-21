@@ -1,6 +1,6 @@
 import { useAuthStore } from "./store";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.ridel.workers.dev";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const { sessionToken } = useAuthStore.getState();
@@ -9,6 +9,11 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   
   if (sessionToken) {
     headers.set("Authorization", `Bearer ${sessionToken}`);
+  }
+
+  // Don't override Content-Type if body is FormData
+  if (options.body instanceof FormData) {
+    headers.delete("Content-Type");
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -38,3 +43,4 @@ export async function publishAssignmentData(formData: FormData) {
     body: formData,
   });
 }
+

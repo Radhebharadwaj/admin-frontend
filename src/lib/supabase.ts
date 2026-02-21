@@ -1,6 +1,18 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+let _supabase: SupabaseClient | null = null
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    if (!_supabase) {
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+      if (url && key) {
+        _supabase = createClient(url, key)
+      } else {
+        throw new Error('Supabase env vars not set')
+      }
+    }
+    return (_supabase as any)[prop]
+  }
+})
