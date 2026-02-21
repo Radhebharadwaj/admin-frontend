@@ -60,15 +60,24 @@ export default function UniversalReaderPage() {
     if (!contentRef.current || !resource) return;
     setIsDownloading(true);
     try {
-      const html2pdf = (await import("html2pdf.js")).default;
+      if (!(window as any).html2pdf) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      }
+
       const opt: any = {
         margin: 1,
         filename: `${resource.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
+        image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-      await html2pdf().set(opt).from(contentRef.current).save();
+      await (window as any).html2pdf().set(opt).from(contentRef.current).save();
     } catch (error) {
       console.error("PDF Download failed:", error);
     } finally {
