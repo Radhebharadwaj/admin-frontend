@@ -354,11 +354,11 @@ export default function SubjectDetailsPage() {
               {groupedChapters.map((group, gi) => (
                 <div key={gi}>
                   {group.unitName && (
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20 uppercase tracking-wider">
+                    <div className="flex items-center gap-4 mb-2 mt-4">
+                      <span className="text-xs font-bold tracking-widest text-indigo-400 uppercase">
                         {group.unitName}
                       </span>
-                      <div className="flex-1 h-px bg-zinc-800" />
+                      <div className="flex-1 border-t border-zinc-800" />
                     </div>
                   )}
                   <DataTable
@@ -372,15 +372,15 @@ export default function SubjectDetailsPage() {
                         key={c.id}
                         className="group hover:bg-zinc-800/30 transition-colors"
                       >
-                        <td className="px-6 py-4 w-20">
-                          <span className="text-xs font-bold text-zinc-400 bg-zinc-800 border border-zinc-700 px-2.5 py-1 rounded-md">
+                        <td className="px-6 py-4 w-24 align-middle">
+                          <span className="inline-flex items-center justify-center whitespace-nowrap px-2.5 py-1 rounded-md bg-zinc-800/50 border border-zinc-700 text-zinc-300 text-xs font-semibold tracking-wide">
                             CH {c.chapter_number}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-white">
+                        <td className="px-6 py-4 text-sm font-semibold text-white align-middle">
                           {c.title}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right align-middle">
                           <div className="flex items-center justify-end gap-1">
                             {canEdit(role, "chapters") && (
                               <button
