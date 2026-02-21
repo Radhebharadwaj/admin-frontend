@@ -538,15 +538,19 @@ export default function SubjectDetailsPage() {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                         {resList.map((r) => (
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
-                                            {r.thumbnail_url ? (
-                                              <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
-                                                <Image src={r.thumbnail_url.startsWith('http') ? r.thumbnail_url : `${process.env.NEXT_PUBLIC_R2_URL}/${r.thumbnail_url}`} alt={r.title} fill className="object-cover" />
-                                              </div>
-                                            ) : (
-                                              <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
-                                                <FileText className="w-8 h-8" />
-                                              </div>
-                                            )}
+                                            {(() => {
+                                              const imgSrc = r.thumbnail_url?.includes('http') ? r.thumbnail_url : `${process.env.NEXT_PUBLIC_R2_URL}/${r.thumbnail_url}`;
+                                              if (r.thumbnail_url) console.log('Rendering Image:', imgSrc);
+                                              return r.thumbnail_url ? (
+                                                <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
+                                                  <Image src={imgSrc} alt={r.title} fill className="object-cover" />
+                                                </div>
+                                              ) : (
+                                                <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
+                                                  <FileText className="w-8 h-8" />
+                                                </div>
+                                              );
+                                            })()}
                                             <div className="p-3 flex flex-col flex-1 justify-between">
                                               <h5 className="text-sm font-semibold text-zinc-200 line-clamp-1">{r.title}</h5>
                                               <div className="flex items-center justify-between mt-4">
