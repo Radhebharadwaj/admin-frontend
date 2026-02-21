@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GraduationCap, BookOpen, Layers, FileText, Plus, Trash2, Search, X, MoreHorizontal, UploadCloud, File, FileUp, Loader2 } from "lucide-react";
+import { GraduationCap, BookOpen, Layers, FileText, Plus, Trash2, Search, X, MoreHorizontal, UploadCloud, File, FileUp, Loader2, Bookmark } from "lucide-react";
 import { fetchApi } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 
 // ===== TYPES =====
 interface University { id: string; name: string; slug: string; website_url: string | null; logo_url: string | null; is_active: number; }
 interface Course { id: string; university_id: string; name: string; slug: string; duration_years: number | null; total_semesters: number; is_active: number; }
 interface SemesterInfo { semester: number; subject_count: number; }
 interface Subject { id: string; course_id: string; semester: number; name: string; subject_code: string; }
-interface Resource { id: string; subject_id: string; category: string; title: string; price_in_inr: number; is_active: number; created_at?: string; }
+interface Chapter { id: string; subject_id: string; chapter_number: number; title: string; unit_name: string | null; is_active: number; }
+interface Resource { id: string; subject_id: string; chapter_id: string | null; category: string; title: string; price_in_inr: number; is_active: number; created_at?: string; }
 
 // ===== STATE MACHINE =====
 type ViewState = 
@@ -17,11 +19,10 @@ type ViewState =
   | { level: "courses"; univId: string; univName: string }
   | { level: "semesters"; univId: string; univName: string; courseId: string; courseName: string; totalSemesters: number }
   | { level: "subjects"; univId: string; univName: string; courseId: string; courseName: string; semester: number }
-  | { level: "resources"; univId: string; univName: string; courseId: string; courseName: string; semester: number; subjectId: string; subjectCode: string; subjectName: string };
+  | { level: "subject_details"; univId: string; univName: string; courseId: string; courseName: string; semester: number; subjectId: string; subjectCode: string; subjectName: string };
 
 // ===== UI COMPONENTS =====
 
-// 1. Sleek Search Bar
 function SearchBar({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="relative max-w-sm w-full">
@@ -33,7 +34,6 @@ function SearchBar({ placeholder, value, onChange }: { placeholder: string; valu
   );
 }
 
-// 2. Dynamic Breadcrumbs
 function Breadcrumb({ items }: { items: { label: string; onClick?: () => void }[] }) {
   return (
     <nav className="flex items-center gap-2 text-sm mb-8 flex-wrap">
@@ -53,7 +53,6 @@ function Breadcrumb({ items }: { items: { label: string; onClick?: () => void }[
   );
 }
 
-// 3. Status Badge
 function StatusBadge({ active }: { active: boolean }) {
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide ${
@@ -64,7 +63,6 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-// 4. Slide-over Drawer (Sheet)
 function SlideOverDrawer({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: React.ReactNode }) {
   if (!open) return null;
   return (
@@ -85,7 +83,6 @@ function SlideOverDrawer({ title, open, onClose, children }: { title: string; op
   );
 }
 
-// 5. Minimalist Data Table
 function DataTable({ headers, children, emptyIcon: EmptyIcon, emptyText }: { headers: string[], children: React.ReactNode, emptyIcon: any, emptyText: string }) {
   return (
     <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl overflow-hidden shadow-sm">
@@ -113,12 +110,15 @@ function DataTable({ headers, children, emptyIcon: EmptyIcon, emptyText }: { hea
 export default function UniversitiesPage() {
   const [view, setView] = useState<ViewState>({ level: "universities" });
   const [search, setSearch] = useState("");
+  const { user } = useAuthStore();
+  const role = user?.role || "GUEST";
   
   // Data States
   const [universities, setUniversities] = useState<University[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [semesters, setSemesters] = useState<SemesterInfo[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   
   // UI States
@@ -126,6 +126,7 @@ export default function UniversitiesPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formType, setFormType] = useState<"university"|"course"|"subject"|"chapter"|"resource" | "">("");
   const [formData, setFormData] = useState<any>({});
   const [error, setError] = useState("");
 
@@ -158,11 +159,14 @@ export default function UniversitiesPage() {
     if (res.success) setSubjects(res.data);
     setLoading(false);
   };
-  const fetchResources = async (subjectId: string) => {
+  const fetchSubjectDetails = async (subjectId: string) => {
     setLoading(true);
-    const res = await fetchApi(`/api/resources?subject_id=${subjectId}`);
-    if (res.success) setResources(res.data);
-    else setResources([]); // Fallback if no resources api
+    const [chRes, rsRes] = await Promise.all([
+      fetchApi(`/api/chapters?subject_id=${subjectId}`),
+      fetchApi(`/api/resources?subject_id=${subjectId}`)
+    ]);
+    if (chRes.success) setChapters(chRes.data); else setChapters([]);
+    if (rsRes.success) setResources(rsRes.data); else setResources([]);
     setLoading(false);
   };
 
@@ -174,9 +178,9 @@ export default function UniversitiesPage() {
     toCourses: (u: string, n: string) => { setView({ level: "courses", univId: u, univName: n }); setSearch(""); fetchCourses(u); },
     toSemesters: (u: string, un: string, c: string, cn: string, ts: number) => { setView({ level: "semesters", univId: u, univName: un, courseId: c, courseName: cn, totalSemesters: ts }); setSearch(""); fetchSemesters(c); },
     toSubjects: (u: string, un: string, c: string, cn: string, s: number) => { setView({ level: "subjects", univId: u, univName: un, courseId: c, courseName: cn, semester: s }); setSearch(""); fetchSubjects(c, s); },
-    toResources: (u: string, un: string, c: string, cn: string, s: number, subId: string, subCode: string, subName: string) => { 
-      setView({ level: "resources", univId: u, univName: un, courseId: c, courseName: cn, semester: s, subjectId: subId, subjectCode: subCode, subjectName: subName }); 
-      setSearch(""); fetchResources(subId); 
+    toSubjectDetails: (u: string, un: string, c: string, cn: string, s: number, subId: string, subCode: string, subName: string) => { 
+      setView({ level: "subject_details", univId: u, univName: un, courseId: c, courseName: cn, semester: s, subjectId: subId, subjectCode: subCode, subjectName: subName }); 
+      setSearch(""); fetchSubjectDetails(subId); 
     }
   };
 
@@ -186,17 +190,17 @@ export default function UniversitiesPage() {
     else { items.push({ label: "Universities", onClick: nav.toUniv }); }
     
     if (view.level === "courses") { items.push({ label: view.univName }); }
-    if (view.level === "semesters" || view.level === "subjects" || view.level === "resources") {
+    if (view.level === "semesters" || view.level === "subjects" || view.level === "subject_details") {
       items.push({ label: (view as any).univName, onClick: () => nav.toCourses((view as any).univId, (view as any).univName) });
       if (view.level === "semesters") items.push({ label: view.courseName });
       else items.push({ label: (view as any).courseName, onClick: () => nav.toSemesters((view as any).univId, (view as any).univName, (view as any).courseId, (view as any).courseName, 0) });
     }
-    if (view.level === "subjects" || view.level === "resources") {
+    if (view.level === "subjects" || view.level === "subject_details") {
       if (view.level === "subjects") items.push({ label: `Semester ${view.semester}` });
       else items.push({ label: `Semester ${(view as any).semester}`, onClick: () => nav.toSubjects((view as any).univId, (view as any).univName, (view as any).courseId, (view as any).courseName, (view as any).semester) });
     }
-    if (view.level === "resources") {
-      items.push({ label: view.subjectCode });
+    if (view.level === "subject_details") {
+      items.push({ label: `${view.subjectCode} - Chapters & Resources` });
     }
     return items;
   };
@@ -204,7 +208,8 @@ export default function UniversitiesPage() {
   // --- CRUD Handlers ---
   const autoSlug = (str: string) => str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
-  const openDrawer = (initialData: any, id?: string) => {
+  const openDrawer = (type: "university"|"course"|"subject"|"chapter"|"resource", initialData: any, id?: string) => {
+    setFormType(type);
     setEditingId(id || null);
     setFormData(initialData);
     setSelectedFile(null);
@@ -218,58 +223,101 @@ export default function UniversitiesPage() {
     if (entity === "universities") fetchUniversities();
     if (entity === "courses" && view.level === "courses") fetchCourses(view.univId);
     if (entity === "subjects" && view.level === "subjects") fetchSubjects(view.courseId, view.semester);
-    if (entity === "resources" && view.level === "resources") fetchResources(view.subjectId);
+    if (entity === "chapters" && view.level === "subject_details") fetchSubjectDetails(view.subjectId);
+    if (entity === "resources" && view.level === "subject_details") fetchSubjectDetails(view.subjectId);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setFormLoading(true); setError("");
     try {
-      if (view.level === "universities") {
+      if (formType === "university") {
         const url = editingId ? `/api/universities/${editingId}` : "/api/universities";
         const res = await fetchApi(url, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
         if (!res.success) throw new Error(res.message);
         await fetchUniversities();
       } 
-      else if (view.level === "courses") {
+      else if (formType === "course") {
         const url = editingId ? `/api/courses/${editingId}` : "/api/courses";
         const payload: any = { ...formData, duration_years: formData.duration_years ? parseInt(formData.duration_years) : null, total_semesters: parseInt(formData.total_semesters) };
-        if (!editingId) payload.university_id = view.univId;
+        if (!editingId && view.level === "courses") payload.university_id = view.univId;
         const res = await fetchApi(url, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         if (!res.success) throw new Error(res.message);
-        await fetchCourses(view.univId);
+        if (view.level === "courses") await fetchCourses(view.univId);
       }
-      else if (view.level === "subjects") {
+      else if (formType === "subject") {
         const url = editingId ? `/api/subjects/${editingId}` : "/api/subjects";
-        const payload: any = { ...formData, semester: view.semester };
-        if (!editingId) payload.course_id = view.courseId;
+        const payload: any = { ...formData, semester: (view as any).semester };
+        if (!editingId && view.level === "subjects") payload.course_id = view.courseId;
         const res = await fetchApi(url, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
         if (!res.success) throw new Error(res.message);
-        await fetchSubjects(view.courseId, view.semester);
+        if (view.level === "subjects") await fetchSubjects(view.courseId, view.semester);
       }
-      else if (view.level === "resources") {
-        // Resource Upload Logic
-        if (!selectedFile && !editingId) throw new Error("Please select a PDF file to upload.");
+      else if (formType === "chapter") {
+        const url = editingId ? `/api/chapters/${editingId}` : "/api/chapters";
+        const payload: any = { ...formData, chapter_number: parseInt(formData.chapter_number) };
+        if (!editingId && view.level === "subject_details") payload.subject_id = view.subjectId;
+        const res = await fetchApi(url, { method: editingId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        if (!res.success) throw new Error(res.message);
+        if (view.level === "subject_details") await fetchSubjectDetails(view.subjectId);
+      }
+      else if (formType === "resource") {
+        // Mocking multipart/form-data upload
+        if (!selectedFile && !editingId) throw new Error("Please select a file to upload.");
         
-        // Mocking upload for now to match UI requirement without full backend integration
-        // (Assuming the backend `/api/upload` route or similar)
         const mockForm = new FormData();
         if (selectedFile) mockForm.append("resourceFile", selectedFile);
-        mockForm.append("subjectCode", view.subjectCode);
-        mockForm.append("sessionYear", formData.session_year || new Date().getFullYear().toString());
-        mockForm.append("price", formData.price_in_inr || "0");
+        if (view.level === "subject_details") mockForm.append("subject_id", view.subjectId);
+        mockForm.append("category", formData.category);
+        mockForm.append("title", formData.title || selectedFile?.name || "Untitled");
+        if (formData.chapter_id) mockForm.append("chapter_id", formData.chapter_id);
+        mockForm.append("price_in_inr", formData.price_in_inr || "0");
+        mockForm.append("r2_object_key", `mock_key_${Date.now()}`); // Mock key since upload endpoint isn't fully integrated here
+        mockForm.append("is_public", formData.is_public ? "true" : "false");
+
+        const url = editingId ? `/api/resources/${editingId}` : "/api/resources";
         
-        const res = await fetchApi("/api/upload", { method: "POST", body: mockForm });
-        if (!res.success) throw new Error(res.message || "Upload failed");
-        await fetchResources(view.subjectId);
+        // For simplicity in this UI iteration, we will use JSON if editing, FormData if uploading
+        if (editingId) {
+          const res = await fetchApi(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+          if (!res.success) throw new Error(res.message);
+        } else {
+          // If we had the real /api/upload, we'd use it here. 
+          // For now, let's just hit the /api/resources POST endpoint with JSON directly since backend expects JSON.
+          const payload = {
+            subject_id: (view as any).subjectId,
+            chapter_id: formData.chapter_id || null,
+            category: formData.category,
+            title: formData.title || selectedFile?.name || "Untitled",
+            r2_object_key: `mock_key_${Date.now()}`,
+            price_in_inr: parseInt(formData.price_in_inr || "0")
+          };
+          const res = await fetchApi("/api/resources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+          if (!res.success) throw new Error(res.message);
+        }
+        if (view.level === "subject_details") await fetchSubjectDetails(view.subjectId);
       }
       setDrawerOpen(false);
     } catch (err: any) { setError(err.message); }
     setFormLoading(false);
   };
 
-  // --- Common Input Styles ---
+  // --- Common Styles ---
   const inputClass = "w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-zinc-600";
   const labelClass = "block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wide";
+  
+  // RBAC Helpers
+  const canEdit = (entity: string) => {
+    if (role === "SUPER_ADMIN") return true;
+    if (role === "CONTENT_MANAGER") return entity !== "universities";
+    if (role === "DATA_ENTRY") return ["chapters", "resources"].includes(entity);
+    return false;
+  };
+  const canDelete = (entity: string) => {
+    if (role === "SUPER_ADMIN") return true;
+    if (role === "CONTENT_MANAGER") return entity !== "universities";
+    if (role === "DATA_ENTRY") return false;
+    return false;
+  };
 
   return (
     <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-500">
@@ -283,35 +331,45 @@ export default function UniversitiesPage() {
             {view.level === "courses" && view.univName}
             {view.level === "semesters" && `${view.courseName} Semesters`}
             {view.level === "subjects" && `Semester ${view.semester}`}
-            {view.level === "resources" && view.subjectCode}
+            {view.level === "subject_details" && `${view.subjectCode} Details`}
           </h1>
           <p className="text-sm text-zinc-400 mt-1.5 font-medium">
             {view.level === "universities" && "Manage parent institutions and academies."}
             {view.level === "courses" && "Manage degree programs and certificates."}
             {view.level === "semesters" && "Select a semester to manage its subjects."}
             {view.level === "subjects" && "Manage subjects and curriculums for this semester."}
-            {view.level === "resources" && "Manage study materials, PYQs, and solutions."}
+            {view.level === "subject_details" && "Manage syllabus chapters and related study materials."}
           </p>
         </div>
         
-        {view.level !== "semesters" && (
-          <button 
-            onClick={() => {
-              if (view.level === "universities") openDrawer({ name: "", slug: "", website_url: "" });
-              if (view.level === "courses") openDrawer({ name: "", slug: "", duration_years: "", total_semesters: "" });
-              if (view.level === "subjects") openDrawer({ name: "", subject_code: "" });
-              if (view.level === "resources") openDrawer({ title: "", category: "PYQ", price_in_inr: "0", session_year: "" });
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)] active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> 
-            Add New {view.level === "universities" ? "University" : view.level === "courses" ? "Course" : view.level === "subjects" ? "Subject" : "Resource"}
-          </button>
+        {view.level !== "semesters" && canEdit(view.level === "subject_details" ? "chapters" : view.level) && (
+          <div className="flex gap-2">
+            {view.level === "subject_details" && (
+              <button 
+                onClick={() => openDrawer("chapter", { title: "", chapter_number: "", unit_name: "" })}
+                className="flex items-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-bold rounded-xl transition-all active:scale-95 border border-zinc-700"
+              >
+                <Plus className="w-4 h-4" /> Add Chapter
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                if (view.level === "universities") openDrawer("university", { name: "", slug: "", website_url: "" });
+                if (view.level === "courses") openDrawer("course", { name: "", slug: "", duration_years: "", total_semesters: "" });
+                if (view.level === "subjects") openDrawer("subject", { name: "", subject_code: "" });
+                if (view.level === "subject_details") openDrawer("resource", { title: "", category: "ASSIGNMENT", price_in_inr: "0" });
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black text-sm font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95"
+            >
+              <Plus className="w-4 h-4" /> 
+              Add New {view.level === "universities" ? "University" : view.level === "courses" ? "Course" : view.level === "subjects" ? "Subject" : "Resource"}
+            </button>
+          </div>
         )}
       </div>
 
       {view.level !== "semesters" && (
-        <div className="mb-6"><SearchBar placeholder="Search by name or code..." value={search} onChange={setSearch} /></div>
+        <div className="mb-6"><SearchBar placeholder="Search..." value={search} onChange={setSearch} /></div>
       )}
 
       {/* CONTENT AREA */}
@@ -329,17 +387,14 @@ export default function UniversitiesPage() {
                 <tr key={u.id} className="group hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => nav.toCourses(u.id, u.name)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:border-zinc-500 transition-colors"><GraduationCap className="w-4 h-4" /></div>
-                      <div>
-                        <div className="font-semibold text-white text-sm">{u.name}</div>
-                        <div className="text-xs text-zinc-500 font-mono mt-0.5">{u.slug}</div>
-                      </div>
+                      <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors"><GraduationCap className="w-4 h-4" /></div>
+                      <div><div className="font-semibold text-white text-sm">{u.name}</div><div className="text-xs text-zinc-500 font-mono mt-0.5">{u.slug}</div></div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-zinc-400">{u.website_url || "—"}</td>
                   <td className="px-6 py-4"><StatusBadge active={u.is_active === 1} /></td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); openDrawer(u, u.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                    {canEdit("universities") && <button onClick={(e) => { e.stopPropagation(); openDrawer("university", u, u.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>}
                   </td>
                 </tr>
               ))}
@@ -354,24 +409,22 @@ export default function UniversitiesPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-zinc-800/80 border border-zinc-700 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors"><BookOpen className="w-4 h-4" /></div>
-                      <div>
-                        <div className="font-semibold text-white text-sm">{c.name}</div>
-                        <div className="text-xs text-zinc-500 font-mono mt-0.5">{c.slug}</div>
-                      </div>
+                      <div><div className="font-semibold text-white text-sm">{c.name}</div><div className="text-xs text-zinc-500 font-mono mt-0.5">{c.slug}</div></div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-zinc-400">{c.duration_years ? `${c.duration_years} Years` : "—"}</td>
                   <td className="px-6 py-4 text-sm text-zinc-400 font-medium">{c.total_semesters}</td>
                   <td className="px-6 py-4"><StatusBadge active={c.is_active === 1} /></td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); openDrawer(c, c.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                    {canEdit("courses") && <button onClick={(e) => { e.stopPropagation(); openDrawer("course", c, c.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>}
+                    {canDelete("courses") && <button onClick={(e) => { e.stopPropagation(); handleDelete("courses", c.id, c.name); }} className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors ml-1"><Trash2 className="w-4 h-4" /></button>}
                   </td>
                 </tr>
               ))}
             </DataTable>
           )}
 
-          {/* SEMESTERS GRID (Keep Grid for Semesters as it's cleaner) */}
+          {/* SEMESTERS GRID */}
           {view.level === "semesters" && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {Array.from({ length: view.totalSemesters }, (_, i) => {
@@ -380,18 +433,10 @@ export default function UniversitiesPage() {
                 const hasSubjects = (existing?.subject_count || 0) > 0;
                 return (
                   <button key={sem} onClick={() => nav.toSubjects(view.univId, view.univName, view.courseId, view.courseName, sem)}
-                    className={`group relative flex flex-col items-center justify-center p-8 rounded-2xl border transition-all duration-300 ${
-                      hasSubjects ? "bg-zinc-900/60 border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/80" : "bg-zinc-950/50 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900"
-                    }`}>
-                    <div className={`w-12 h-12 rounded-full mb-4 flex items-center justify-center transition-colors ${
-                      hasSubjects ? "bg-zinc-800 text-white" : "bg-zinc-900 text-zinc-600"
-                    }`}>
-                      <Layers className="w-5 h-5" />
-                    </div>
+                    className={`group relative flex flex-col items-center justify-center p-8 rounded-2xl border transition-all duration-300 ${hasSubjects ? "bg-zinc-900/60 border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800/80" : "bg-zinc-950/50 border-zinc-800/50 hover:border-zinc-700 hover:bg-zinc-900"}`}>
+                    <div className={`w-12 h-12 rounded-full mb-4 flex items-center justify-center transition-colors ${hasSubjects ? "bg-zinc-800 text-white" : "bg-zinc-900 text-zinc-600"}`}><Layers className="w-5 h-5" /></div>
                     <h3 className="font-bold text-white text-base mb-1">Semester {sem}</h3>
-                    <p className={`text-xs font-medium ${hasSubjects ? "text-indigo-400" : "text-zinc-600"}`}>
-                      {hasSubjects ? `${existing?.subject_count} Subjects` : "Empty"}
-                    </p>
+                    <p className={`text-xs font-medium ${hasSubjects ? "text-indigo-400" : "text-zinc-600"}`}>{hasSubjects ? `${existing?.subject_count} Subjects` : "Empty"}</p>
                   </button>
                 );
               })}
@@ -402,58 +447,79 @@ export default function UniversitiesPage() {
           {view.level === "subjects" && (
             <DataTable headers={["Subject Code", "Subject Name", "Actions"]} emptyIcon={FileText} emptyText="No subjects found">
               {subjects.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.subject_code.toLowerCase().includes(search.toLowerCase())).map(s => (
-                <tr key={s.id} className="group hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => nav.toResources(view.univId, view.univName, view.courseId, view.courseName, view.semester, s.id, s.subject_code, s.name)}>
-                  <td className="px-6 py-4">
-                    <span className="font-mono text-xs font-bold tracking-wide text-zinc-300 bg-zinc-800 border border-zinc-700 px-3 py-1.5 rounded-md">
-                      {s.subject_code}
-                    </span>
-                  </td>
+                <tr key={s.id} className="group hover:bg-zinc-800/30 transition-colors cursor-pointer" onClick={() => nav.toSubjectDetails(view.univId, view.univName, view.courseId, view.courseName, view.semester, s.id, s.subject_code, s.name)}>
+                  <td className="px-6 py-4"><span className="font-mono text-xs font-bold tracking-wide text-zinc-300 bg-zinc-800 border border-zinc-700 px-3 py-1.5 rounded-md">{s.subject_code}</span></td>
                   <td className="px-6 py-4 text-sm font-semibold text-white">{s.name}</td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); openDrawer(s, s.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                    {canEdit("subjects") && <button onClick={(e) => { e.stopPropagation(); openDrawer("subject", s, s.id); }} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>}
+                    {canDelete("subjects") && <button onClick={(e) => { e.stopPropagation(); handleDelete("subjects", s.id, s.name); }} className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors ml-1"><Trash2 className="w-4 h-4" /></button>}
                   </td>
                 </tr>
               ))}
             </DataTable>
           )}
 
-          {/* RESOURCES TABLE */}
-          {view.level === "resources" && (
-            <DataTable headers={["File / Title", "Category", "Price", "Status", "Actions"]} emptyIcon={File} emptyText="No resources uploaded yet">
-              {resources.map(r => (
-                <tr key={r.id} className="group hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400"><FileText className="w-5 h-5" /></div>
-                      <div>
-                        <div className="font-semibold text-white text-sm">{r.title || r.category}</div>
-                        <div className="text-xs text-zinc-500 font-mono mt-0.5">{r.created_at ? new Date(r.created_at).toLocaleDateString() : "Uploaded recently"}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4"><span className="text-xs font-bold text-zinc-300 bg-zinc-800 px-2.5 py-1 rounded-md">{r.category}</span></td>
-                  <td className="px-6 py-4 text-sm font-medium text-emerald-400">{r.price_in_inr > 0 ? `₹${r.price_in_inr}` : "FREE"}</td>
-                  <td className="px-6 py-4"><StatusBadge active={r.is_active === 1} /></td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => handleDelete("resources", r.id, r.title)} className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                  </td>
-                </tr>
-              ))}
-            </DataTable>
+          {/* CHAPTERS AND RESOURCES (SUBJECT DETAILS) */}
+          {view.level === "subject_details" && (
+            <div className="space-y-8">
+              {/* Chapters Section */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Bookmark className="w-5 h-5 text-indigo-400" /> Syllabus Chapters</h3>
+                <DataTable headers={["Chapter", "Title", "Unit", "Actions"]} emptyIcon={Bookmark} emptyText="No chapters added yet">
+                  {chapters.map(c => (
+                    <tr key={c.id} className="group hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-4"><span className="text-xs font-bold text-zinc-400">CH {c.chapter_number}</span></td>
+                      <td className="px-6 py-4 text-sm font-semibold text-white">{c.title}</td>
+                      <td className="px-6 py-4 text-sm text-zinc-400">{c.unit_name || "—"}</td>
+                      <td className="px-6 py-4 text-right">
+                        {canEdit("chapters") && <button onClick={() => openDrawer("chapter", c, c.id)} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>}
+                        {canDelete("chapters") && <button onClick={() => handleDelete("chapters", c.id, c.title)} className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors ml-1"><Trash2 className="w-4 h-4" /></button>}
+                      </td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </div>
+
+              {/* Resources Section */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><FileText className="w-5 h-5 text-emerald-400" /> Study Materials</h3>
+                <DataTable headers={["Title", "Linked To", "Category", "Price", "Actions"]} emptyIcon={File} emptyText="No resources uploaded yet">
+                  {resources.map(r => (
+                    <tr key={r.id} className="group hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-zinc-800/50 flex items-center justify-center text-zinc-400"><FileText className="w-4 h-4" /></div>
+                          <div className="font-semibold text-white text-sm">{r.title}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-zinc-400">
+                        {r.chapter_id ? `CH ${chapters.find(c => c.id === r.chapter_id)?.chapter_number || '?'}` : 'Subject Level'}
+                      </td>
+                      <td className="px-6 py-4"><span className="text-[10px] font-bold text-zinc-300 bg-zinc-800 px-2 py-1 rounded-md">{r.category}</span></td>
+                      <td className="px-6 py-4 text-sm font-medium text-emerald-400">{r.price_in_inr > 0 ? `₹${r.price_in_inr}` : "FREE"}</td>
+                      <td className="px-6 py-4 text-right">
+                        {canEdit("resources") && <button onClick={() => openDrawer("resource", r, r.id)} className="p-2 text-zinc-500 hover:text-white rounded-lg hover:bg-zinc-700 transition-colors"><MoreHorizontal className="w-4 h-4" /></button>}
+                        {canDelete("resources") && <button onClick={() => handleDelete("resources", r.id, r.title)} className="p-2 text-zinc-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors ml-1"><Trash2 className="w-4 h-4" /></button>}
+                      </td>
+                    </tr>
+                  ))}
+                </DataTable>
+              </div>
+            </div>
           )}
         </>
       )}
 
       {/* DRAWER FOR ALL FORMS */}
       <SlideOverDrawer 
-        title={editingId ? `Edit ${view.level.slice(0, -1)}` : `New ${view.level === "universities" ? "University" : view.level === "courses" ? "Course" : view.level === "subjects" ? "Subject" : "Resource"}`} 
+        title={editingId ? `Edit Form` : `Create New`} 
         open={drawerOpen} onClose={() => setDrawerOpen(false)}
       >
         <form onSubmit={handleFormSubmit} className="space-y-5">
           {error && <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm font-medium">{error}</div>}
 
           {/* University Fields */}
-          {view.level === "universities" && (
+          {formType === "university" && (
             <>
               <div><label className={labelClass}>University Name</label><input type="text" className={inputClass} value={formData.name || ""} onChange={e => setFormData({...formData, name: e.target.value, slug: editingId ? formData.slug : autoSlug(e.target.value)})} placeholder="e.g. Stanford University" required /></div>
               <div><label className={labelClass}>Slug</label><input type="text" className={`${inputClass} font-mono`} value={formData.slug || ""} onChange={e => setFormData({...formData, slug: e.target.value})} placeholder="stanford-univ" required /></div>
@@ -462,7 +528,7 @@ export default function UniversitiesPage() {
           )}
 
           {/* Course Fields */}
-          {view.level === "courses" && (
+          {formType === "course" && (
             <>
               <div><label className={labelClass}>Course Name</label><input type="text" className={inputClass} value={formData.name || ""} onChange={e => setFormData({...formData, name: e.target.value, slug: editingId ? formData.slug : autoSlug(e.target.value)})} placeholder="e.g. Computer Science" required /></div>
               <div><label className={labelClass}>Slug</label><input type="text" className={`${inputClass} font-mono`} value={formData.slug || ""} onChange={e => setFormData({...formData, slug: e.target.value})} placeholder="computer-science" required /></div>
@@ -474,19 +540,28 @@ export default function UniversitiesPage() {
           )}
 
           {/* Subject Fields */}
-          {view.level === "subjects" && (
+          {formType === "subject" && (
             <>
               <div><label className={labelClass}>Subject Code</label><input type="text" className={`${inputClass} font-mono uppercase`} value={formData.subject_code || ""} onChange={e => setFormData({...formData, subject_code: e.target.value.toUpperCase()})} placeholder="CS-101" required /></div>
               <div><label className={labelClass}>Subject Name</label><input type="text" className={inputClass} value={formData.name || ""} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Data Structures" required /></div>
             </>
           )}
 
+          {/* Chapter Fields */}
+          {formType === "chapter" && (
+            <>
+              <div><label className={labelClass}>Chapter Number</label><input type="number" min="1" className={inputClass} value={formData.chapter_number || ""} onChange={e => setFormData({...formData, chapter_number: e.target.value})} placeholder="1" required /></div>
+              <div><label className={labelClass}>Chapter Title</label><input type="text" className={inputClass} value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Introduction to Arrays" required /></div>
+              <div><label className={labelClass}>Unit / Block Name (Optional)</label><input type="text" className={inputClass} value={formData.unit_name || ""} onChange={e => setFormData({...formData, unit_name: e.target.value})} placeholder="Block 1" /></div>
+            </>
+          )}
+
           {/* Resource Upload Fields */}
-          {view.level === "resources" && (
+          {formType === "resource" && (
             <>
               {!editingId && (
                 <div>
-                  <label className={labelClass}>Upload PDF</label>
+                  <label className={labelClass}>Upload File</label>
                   <div 
                     className={`mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-dashed rounded-2xl transition-all cursor-pointer ${dragActive ? 'border-indigo-500 bg-indigo-500/10' : selectedFile ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/50'}`}
                     onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -495,34 +570,51 @@ export default function UniversitiesPage() {
                     onClick={() => document.getElementById('file-upload')?.click()}
                   >
                     <div className="space-y-2 text-center">
-                      {selectedFile ? (
-                        <FileUp className="mx-auto h-10 w-10 text-emerald-400" />
-                      ) : (
-                        <UploadCloud className="mx-auto h-10 w-10 text-zinc-500" />
-                      )}
+                      {selectedFile ? <FileUp className="mx-auto h-10 w-10 text-emerald-400" /> : <UploadCloud className="mx-auto h-10 w-10 text-zinc-500" />}
                       <div className="flex text-sm text-zinc-400 justify-center">
                         <span className={selectedFile ? "text-emerald-400 font-semibold" : "text-indigo-400 font-semibold"}>
                           {selectedFile ? selectedFile.name : "Click to upload or drag and drop"}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-600">PDF up to 10MB</p>
+                      <p className="text-xs text-zinc-600">Max size 100MB</p>
                     </div>
-                    <input id="file-upload" type="file" className="hidden" accept=".pdf" onChange={(e) => { if (e.target.files && e.target.files[0]) setSelectedFile(e.target.files[0]); }} />
+                    <input id="file-upload" type="file" className="hidden" onChange={(e) => { if (e.target.files && e.target.files[0]) setSelectedFile(e.target.files[0]); }} />
                   </div>
                 </div>
               )}
               
+              <div><label className={labelClass}>Resource Title</label><input type="text" className={inputClass} value={formData.title || ""} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Title (e.g., Assignment 1)" required /></div>
+
+              <div><label className={labelClass}>Link to Chapter</label>
+                <select className={inputClass} value={formData.chapter_id || ""} onChange={e => setFormData({...formData, chapter_id: e.target.value})}>
+                  <option value="">-- Subject Level (No Chapter) --</option>
+                  {chapters.map(ch => (
+                    <option key={ch.id} value={ch.id}>CH {ch.chapter_number}: {ch.title}</option>
+                  ))}
+                </select>
+              </div>
+
               <div><label className={labelClass}>Category</label>
-                <select className={inputClass} value={formData.category || "PYQ"} onChange={e => setFormData({...formData, category: e.target.value})}>
-                  <option value="PYQ">Previous Year Question (PYQ)</option>
-                  <option value="SOLUTION">Solution / Notes</option>
+                <select className={inputClass} value={formData.category || "ASSIGNMENT"} onChange={e => setFormData({...formData, category: e.target.value})}>
                   <option value="ASSIGNMENT">Assignment</option>
+                  <option value="PROJECT">Project</option>
+                  <option value="PYQ">PYQ (Previous Year Question)</option>
+                  <option value="SHORTNOTES">Short Notes</option>
+                  <option value="SOLUTION">Solution</option>
+                  <option value="VIDEO_LECTURE">Video Lecture</option>
+                  <option value="EBOOK_MODULE">eBook Module</option>
                 </select>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div><label className={labelClass}>Session Year</label><input type="text" className={inputClass} value={formData.session_year || ""} onChange={e => setFormData({...formData, session_year: e.target.value})} placeholder="e.g. 2024" required /></div>
                 <div><label className={labelClass}>Price (INR)</label><input type="number" min="0" className={inputClass} value={formData.price_in_inr || ""} onChange={e => setFormData({...formData, price_in_inr: e.target.value})} placeholder="₹ 0 for free" /></div>
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-zinc-400 mt-8 cursor-pointer">
+                    <input type="checkbox" className="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-zinc-950" 
+                           checked={formData.is_public || false} onChange={e => setFormData({...formData, is_public: e.target.checked})} />
+                    Is Public?
+                  </label>
+                </div>
               </div>
             </>
           )}

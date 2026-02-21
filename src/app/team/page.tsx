@@ -8,6 +8,7 @@ import { Plus, Edit2, Trash2, PowerOff, ShieldAlert, Loader2 } from "lucide-reac
 type TeamMember = {
   id: string;
   email: string;
+  member_name?: string;
   role: string;
   scope: string;
   is_active: boolean;
@@ -24,7 +25,7 @@ export default function TeamPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ email: "", role: "EDITOR", scope: "ALL" });
+  const [formData, setFormData] = useState({ email: "", member_name: "", role: "EDITOR", scope: "ALL" });
 
   const router = useRouter();
 
@@ -65,10 +66,10 @@ export default function TeamPage() {
   const handleOpenModal = (member?: TeamMember) => {
     if (member) {
       setEditingId(member.id);
-      setFormData({ email: member.email, role: member.role, scope: member.scope });
+      setFormData({ email: member.email, member_name: member.member_name || "", role: member.role, scope: member.scope });
     } else {
       setEditingId(null);
-      setFormData({ email: "", role: "EDITOR", scope: "ALL" });
+      setFormData({ email: "", member_name: "", role: "EDITOR", scope: "ALL" });
     }
     setIsModalOpen(true);
   };
@@ -76,7 +77,7 @@ export default function TeamPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ email: "", role: "EDITOR", scope: "ALL" });
+    setFormData({ email: "", member_name: "", role: "EDITOR", scope: "ALL" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,6 +183,7 @@ export default function TeamPage() {
             <table className="w-full text-left">
               <thead className="bg-zinc-900/50 border-b border-zinc-800 text-sm font-medium text-zinc-400">
                 <tr>
+                  <th className="px-6 py-4">Name</th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Role</th>
                   <th className="px-6 py-4">Scope</th>
@@ -192,14 +194,15 @@ export default function TeamPage() {
               <tbody className="divide-y divide-zinc-800/50">
                 {members.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
                       No team members found.
                     </td>
                   </tr>
                 ) : (
                   members.map((member) => (
                     <tr key={member.id} className="hover:bg-zinc-800/20 transition-colors">
-                      <td className="px-6 py-4 font-medium">{member.email}</td>
+                      <td className="px-6 py-4 font-medium text-white">{member.member_name || "—"}</td>
+                      <td className="px-6 py-4 text-zinc-400">{member.email}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${member.role === 'SUPER_ADMIN' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                           }`}>
@@ -265,6 +268,18 @@ export default function TeamPage() {
               </h2>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1.5">Member Name</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.member_name}
+                  onChange={(e) => setFormData({ ...formData, member_name: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                  placeholder="John Doe"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1.5">Email Address</label>
                 <input

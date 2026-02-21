@@ -7,6 +7,7 @@ import { fetchApi } from "@/lib/api";
 interface TeamMember {
   id: string;
   email: string;
+  member_name?: string;
   role: "SUPER_ADMIN" | "ADMIN" | "EDITOR";
   scope: string;
   is_active: boolean;
@@ -40,7 +41,7 @@ function MemberCard({ member }: { member: TeamMember }) {
         <Icon className={`w-6 h-6 ${config.color}`} />
       </div>
       <h3 className="text-white font-semibold text-sm truncate w-full px-2" title={member.email}>
-        {maskEmail(member.email)}
+        {member.member_name || maskEmail(member.email)}
       </h3>
       <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${config.color} ${config.bg}`}>
         {config.label}
