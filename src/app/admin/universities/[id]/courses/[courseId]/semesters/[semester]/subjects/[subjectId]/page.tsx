@@ -539,11 +539,15 @@ export default function SubjectDetailsPage() {
                                         {resList.map((r) => (
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
                                             {(() => {
-                                              const imgSrc = r.thumbnail_url?.includes('http') ? r.thumbnail_url : `${process.env.NEXT_PUBLIC_R2_URL}/${r.thumbnail_url}`;
-                                              if (r.thumbnail_url) console.log('Rendering Image:', imgSrc);
+                                              const baseUrl = (process.env.NEXT_PUBLIC_R2_URL || '').replace(/\/$/, '');
+                                              const imagePath = r.thumbnail_url?.replace(/^\//, '') || '';
+                                              const finalSrc = r.thumbnail_url?.startsWith('http') 
+                                                  ? r.thumbnail_url 
+                                                  : `${baseUrl}/${imagePath}`;
+                                              if (r.thumbnail_url) console.log('Rendering Image:', finalSrc);
                                               return r.thumbnail_url ? (
                                                 <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
-                                                  <Image src={imgSrc} alt={r.title} fill className="object-cover" />
+                                                  <Image src={finalSrc} alt={r.title} fill className="object-cover" onError={(e) => { e.currentTarget.src = '/fallback-placeholder.png'; e.currentTarget.srcset = ''; }} />
                                                 </div>
                                               ) : (
                                                 <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
