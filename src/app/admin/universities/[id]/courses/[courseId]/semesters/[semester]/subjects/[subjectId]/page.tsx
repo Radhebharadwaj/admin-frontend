@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Eye,
+  Image as ImageIcon,
 } from "lucide-react";
 import useSWR from "swr";
 import Image from "next/image";
@@ -74,6 +75,32 @@ const CATEGORIES = [
   { value: "VIDEO_LECTURE", label: "Video Lecture" },
   { value: "EBOOK_MODULE", label: "eBook Module" },
 ];
+
+function ResourceImage({ resource }: { resource: any }) {
+  const [hasError, setHasError] = useState(false);
+  const baseUrl = (process.env.NEXT_PUBLIC_R2_URL || '').replace(/\/$/, '');
+  const imagePath = resource.thumbnail_url?.replace(/^\//, '') || '';
+  const finalSrc = resource.thumbnail_url?.startsWith('http') 
+      ? resource.thumbnail_url 
+      : `${baseUrl}/${imagePath}`;
+
+  if (!resource.thumbnail_url || hasError) {
+    return (
+      <div className="w-full h-40 bg-zinc-900 flex items-center justify-center text-zinc-500 rounded-t-md border-b border-zinc-800">
+        <ImageIcon size={32} />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={finalSrc} 
+      alt={resource.title} 
+      className="w-full h-40 object-cover rounded-t-md border-b border-zinc-800" 
+      onError={() => setHasError(true)} 
+    />
+  );
+}
 
 export default function SubjectDetailsPage() {
   const params = useParams();
@@ -538,23 +565,7 @@ export default function SubjectDetailsPage() {
                                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                         {resList.map((r) => (
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
-                                            {(() => {
-                                              const baseUrl = (process.env.NEXT_PUBLIC_R2_URL || '').replace(/\/$/, '');
-                                              const imagePath = r.thumbnail_url?.replace(/^\//, '') || '';
-                                              const finalSrc = r.thumbnail_url?.startsWith('http') 
-                                                  ? r.thumbnail_url 
-                                                  : `${baseUrl}/${imagePath}`;
-                                              if (r.thumbnail_url) console.log('Rendering Image:', finalSrc);
-                                              return r.thumbnail_url ? (
-                                                <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
-                                                  <Image src={finalSrc} alt={r.title} fill className="object-cover" onError={(e) => { e.currentTarget.src = '/fallback-placeholder.png'; e.currentTarget.srcset = ''; }} />
-                                                </div>
-                                              ) : (
-                                                <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
-                                                  <FileText className="w-8 h-8" />
-                                                </div>
-                                              );
-                                            })()}
+                                            <ResourceImage resource={r} />
                                             <div className="p-3 flex flex-col flex-1 justify-between">
                                               <h5 className="text-sm font-semibold text-zinc-200 line-clamp-1">{r.title}</h5>
                                               <div className="flex items-center justify-between mt-4">
