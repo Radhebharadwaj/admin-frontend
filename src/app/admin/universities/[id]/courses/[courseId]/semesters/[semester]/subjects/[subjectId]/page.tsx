@@ -177,7 +177,7 @@ export default function SubjectDetailsPage() {
         const payload: any = {
           ...formData,
           chapter_number: parseInt(formData.chapter_number),
-          unit_name: formData.unit_name || null,
+          unit_name: formData.unit_name ? formData.unit_name.trim() : null,
         };
         if (!editingId) payload.subject_id = subjectId;
 
@@ -603,7 +603,7 @@ export default function SubjectDetailsPage() {
                   />
                   {showUnitDropdown && (
                     <div className="absolute z-10 w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl max-h-48 overflow-auto">
-                      {Array.from(new Set(chapters.map((c) => c.unit_name).filter(Boolean)))
+                      {Array.from(new Set(chapters.map((c) => c.unit_name?.trim()).filter(Boolean)))
                         .filter((u) => u!.toLowerCase().includes((formData.unit_name || "").toLowerCase()))
                         .map((u) => (
                           <button
