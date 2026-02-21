@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { UploadCloud, FileText, Send, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
-import { Button } from "@/src/components/ui/Button";
-import { publishAssignmentData } from "@/src/lib/api";
+import { Button } from "@/components/ui/Button";
+import { publishAssignmentData } from "@/lib/api";
 
 export default function DataEntryForm({ dropdownData }: { dropdownData?: any }) {
   const [isHovering, setIsHovering] = useState(false);
@@ -40,7 +40,7 @@ export default function DataEntryForm({ dropdownData }: { dropdownData?: any }) 
       formData.append("resource_file", file);
     }
 
-    const res = await publishAssignmentData(null, formData);
+    const res = await publishAssignmentData(formData);
     
     if (res.success) {
       setShowToast(true);

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DataEntryForm from "@/src/components/admin/DataEntryForm";
+import DataEntryForm from "@/components/admin/DataEntryForm";
 
-import { getDashboardStats, getDropdownData } from "@/src/lib/api";
+import { getDashboardStats, getDropdownData } from "@/lib/api";
 
 export default function AdminClient() {
   const [stats, setStats] = useState({ universities: 0, courses: 0, subjects: 0, totalSales: 0 });

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import AdminShell from "@/src/components/admin/AdminShell";
+import AdminShell from "@/components/admin/AdminShell";
 
 // Placeholder role check
 async function checkAdminAccess() {
