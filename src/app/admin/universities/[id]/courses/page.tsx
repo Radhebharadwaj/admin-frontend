@@ -93,10 +93,20 @@ export default function CoursesPage() {
     )
       return;
     try {
-      const res = await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
-      if (!res.success) throw new Error(res.message);
+      await mutate(
+        async () => {
+          const res = await fetchApi(`/api/courses/${id}`, { method: "DELETE" });
+          if (!res.success) throw new Error(res.message);
+          return courses.filter((c) => c.id !== id);
+        },
+        {
+          optimisticData: courses.filter((c) => c.id !== id),
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false,
+        }
+      );
       addToast("success", "Course deleted successfully.");
-      mutate();
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete course.");
     }
@@ -117,14 +127,32 @@ export default function CoursesPage() {
       };
       if (!editingId) payload.university_id = universityId;
 
-      const res = await fetchApi(url, {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.success) throw new Error(res.message);
+      const optimisticData = editingId
+        ? courses.map((c) => (c.id === editingId ? { ...c, ...payload } : c))
+        : [{ ...payload, id: `temp-${Date.now()}` }, ...courses];
+
+      await mutate(
+        async () => {
+          const res = await fetchApi(url, {
+            method: editingId ? "PATCH" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!res.success) throw new Error(res.message);
+          
+          const fetchRes = await fetchApi(`/api/courses?university_id=${universityId}`);
+          if (fetchRes.success) return fetchRes.data;
+          throw new Error("Failed to reload data");
+        },
+        {
+          optimisticData: optimisticData as Course[],
+          rollbackOnError: true,
+          populateCache: true,
+          revalidate: false,
+        }
+      );
+
       addToast("success", editingId ? "Course updated successfully." : "Course created successfully.");
-      mutate();
       setDrawerOpen(false);
     } catch (err: any) {
       setError(err.message);

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { UploadCloud, X, Loader2, ImageIcon } from "lucide-react";
+import Image from "next/image";
 import { useUpload } from "@/lib/useUpload";
 
 interface ImageUploaderProps {
@@ -89,12 +90,13 @@ export default function ImageUploader({
       {/* Preview State */}
       {displayUrl && !uploading ? (
         <div className="relative group rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
-          <div className="aspect-[16/9] w-full flex items-center justify-center bg-zinc-950/50 p-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+          <div className="aspect-[16/9] w-full relative flex items-center justify-center bg-zinc-950/50">
+            <Image
               src={displayUrl}
               alt="Preview"
-              className="max-h-full max-w-full object-contain rounded-lg"
+              fill
+              sizes="(max-width: 768px) 100vw, 400px"
+              className="object-contain p-4"
             />
           </div>
           <button
