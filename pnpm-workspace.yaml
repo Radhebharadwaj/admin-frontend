@@ -1,6 +1,0 @@
-allowBuilds:
-  esbuild: set this to true or false
-  unrs-resolver: true
-  workerd: set this to true or false
-minimumReleaseAgeExclude:
-  - lucide-react@1.40.0
