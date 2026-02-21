@@ -1,6 +1,6 @@
 import { useAuthStore } from "./store";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.ridel.workers.dev";
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const { sessionToken } = useAuthStore.getState();
