@@ -1,14 +1,55 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutDashboard, Users, BookOpen, GraduationCap, Settings, Menu, X } from "lucide-react";
 import SignOutButton from "@/components/admin/SignOutButton";
+import { useAuthStore } from "@/lib/store";
+import { getAdminProfile } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
-export default function AdminShell({ children, role }: { children: React.ReactNode, role: string }) {
+export default function AdminShell({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const { sessionToken, user, setUser } = useAuthStore();
+
+  useEffect(() => {
+    if (!sessionToken) {
+      router.push("/");
+      return;
+    }
+
+    if (!user) {
+      getAdminProfile().then((res) => {
+        if (res.success && res.data) {
+          setUser(res.data);
+          setLoading(false);
+        } else {
+          // Unauthorized or failed
+          setUser(null);
+          setSessionToken(null);
+          supabase.auth.signOut().finally(() => {
+            router.push("/unauthorized");
+          });
+        }
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [sessionToken, user, setUser, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  const role = user?.role || "UNKNOWN";
 
   const isActive = (path: string) => {
     if (path === "/admin") return pathname === path;
@@ -54,17 +95,22 @@ export default function AdminShell({ children, role }: { children: React.ReactNo
             <BookOpen className="w-5 h-5" />
             Subjects
           </Link>
-          <Link onClick={() => setIsSidebarOpen(false)} href="/admin/team" className={getLinkClasses("/admin/team")}>
-            <Users className="w-5 h-5" />
-            Team
-          </Link>
+          
+          {role === "SUPER_ADMIN" && (
+            <Link onClick={() => setIsSidebarOpen(false)} href="/admin/team" className={getLinkClasses("/admin/team")}>
+              <Users className="w-5 h-5" />
+              Team
+            </Link>
+          )}
         </nav>
 
         <div className="p-4 border-t border-slate-200 dark:border-white/10 space-y-1 shrink-0">
-          <Link onClick={() => setIsSidebarOpen(false)} href="/admin/settings" className={getLinkClasses("/admin/settings")}>
-            <Settings className="w-5 h-5" />
-            Settings
-          </Link>
+          {role === "SUPER_ADMIN" && (
+            <Link onClick={() => setIsSidebarOpen(false)} href="/admin/settings" className={getLinkClasses("/admin/settings")}>
+              <Settings className="w-5 h-5" />
+              Settings
+            </Link>
+          )}
           <SignOutButton />
         </div>
       </aside>

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { UploadCloud, FileText, Send, CheckCircle2, ChevronDown, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { UploadCloud, FileText, Send, CheckCircle2, ChevronDown, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { publishAssignmentData } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 
 export default function DataEntryForm({ dropdownData }: { dropdownData?: any }) {
+  const { user } = useAuthStore();
   const [isHovering, setIsHovering] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -84,15 +86,30 @@ export default function DataEntryForm({ dropdownData }: { dropdownData?: any }) 
         {/* Smart Dropdowns Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="relative">
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">University</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">University</label>
+              {user?.scope !== "ALL" && (
+                <div className="flex items-center gap-1 text-xs font-semibold text-rose-500 bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 rounded-full">
+                  <Lock className="w-3 h-3" /> Locked
+                </div>
+              )}
+            </div>
             <div className="relative">
-              <select name="university" required className="w-full appearance-none bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium cursor-pointer">
-                <option value="">Select University...</option>
-                {dropdownData?.universities?.map((u: any) => (
-                  <option key={u.id} value={u.slug}>{u.name}</option>
-                ))}
+              <select 
+                name="university" 
+                required 
+                className={`w-full appearance-none bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all font-medium ${user?.scope !== "ALL" ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                defaultValue={user?.scope !== "ALL" ? user?.scope : ""}
+                disabled={user?.scope !== "ALL"}
+              >
+                {user?.scope === "ALL" && <option value="">Select University...</option>}
+                {dropdownData?.universities?.map((u: any) => {
+                  // If restricted, only show their assigned university
+                  if (user?.scope !== "ALL" && u.slug !== user?.scope) return null;
+                  return <option key={u.id} value={u.slug}>{u.name}</option>
+                })}
               </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+              {user?.scope === "ALL" && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />}
             </div>
           </div>
           
