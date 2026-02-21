@@ -1,4 +1,3 @@
-export const runtime = 'edge';
 
 import PublicNavbar from "@/components/public/PublicNavbar";
 
