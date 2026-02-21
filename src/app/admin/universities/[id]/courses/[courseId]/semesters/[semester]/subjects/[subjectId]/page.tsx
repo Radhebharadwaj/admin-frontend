@@ -69,8 +69,8 @@ export default function SubjectDetailsPage() {
   const { data: uniData } = useSWR(`/api/universities/${universityId}`, swrFetcher);
   const { data: courseData } = useSWR(`/api/courses/${courseId}`, swrFetcher);
   const { data: subData } = useSWR(`/api/subjects/${subjectId}`, swrFetcher);
-  const { data: chapters = [], mutate: mutateChapters } = useSWR<Chapter[]>(`/api/chapters?subject_id=${subjectId}`, swrFetcher);
-  const { data: resources = [], isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
+  const { data: chapters = [], error: chError, mutate: mutateChapters } = useSWR<Chapter[]>(`/api/chapters?subject_id=${subjectId}`, swrFetcher);
+  const { data: resources = [], error: resError, isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
 
   const univName = uniData?.name || "";
   const courseName = courseData?.name || "";
@@ -516,7 +516,6 @@ export default function SubjectDetailsPage() {
         </div>
         </div>
       )}
-      </div>
 
       {/* ===== DRAWER ===== */}
       <SlideOverDrawer
