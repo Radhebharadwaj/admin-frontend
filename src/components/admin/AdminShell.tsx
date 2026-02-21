@@ -35,6 +35,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             router.push("/unauthorized");
           });
         }
+      }).catch((err) => {
+        console.error("Failed to fetch admin profile:", err);
+        setUser(null);
+        setSessionToken(null);
+        supabase.auth.signOut().finally(() => {
+          router.push("/unauthorized");
+        });
       });
     } else {
       setLoading(false);
