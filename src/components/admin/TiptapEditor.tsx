@@ -12,6 +12,7 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { marked } from 'marked'
+import toast from 'react-hot-toast'
 import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize, Video, FileUp, Palette, Table as TableIcon } from 'lucide-react'
 
 interface TiptapEditorProps {
@@ -83,7 +84,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
 
     const isMarkdownOrText = file.name.endsWith('.md') || file.name.endsWith('.txt')
     if (!isMarkdownOrText) {
-      alert('Please upload a valid .md or .txt file')
+      toast.error('Invalid File Type: Please upload only Markdown (.md) or Text (.txt) files for the module.')
       e.target.value = ''
       return
     }
@@ -224,7 +225,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           </button>
           <input 
             type="file" 
-            accept=".md,.txt,text/plain,text/markdown,*" 
+            accept="*/*" 
             ref={fileInputRef} 
             onChange={handleFileUpload} 
             className="hidden" 
