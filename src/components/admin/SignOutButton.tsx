@@ -3,16 +3,23 @@
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+import { useAuthStore } from "@/lib/store";
+import { supabase } from "@/lib/supabase";
+
 export default function SignOutButton() {
   const router = useRouter();
+  const { setSessionToken, setUser } = useAuthStore();
 
-  const handleSignOut = () => {
-    // Delete the admin session cookie by setting its expiration date to the past
-    document.cookie = "qudu_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  const handleSignOut = async () => {
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+    
+    // Clear Zustand store
+    setSessionToken(null);
+    setUser(null);
     
     // Redirect to home page
     router.push("/");
-    router.refresh(); // Refresh the router to update server components state
   };
 
   return (
