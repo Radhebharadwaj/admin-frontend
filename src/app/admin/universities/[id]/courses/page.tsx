@@ -22,6 +22,7 @@ import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
+import SkeletonTable from "@/components/admin/SkeletonTable";
 
 // ===== TYPES =====
 interface University {
@@ -179,15 +180,19 @@ export default function CoursesPage() {
       <Breadcrumb
         items={[
           { label: "Universities", href: "/admin/universities" },
-          { label: university?.name || "Loading..." },
+          { label: university?.name || <div className="w-24 h-4 bg-zinc-800 animate-pulse rounded" /> },
         ]}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            {university?.name || "..."} — Courses
+          <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            {university?.name ? (
+              `${university.name} — Courses`
+            ) : (
+              <div className="w-64 h-9 bg-zinc-800 animate-pulse rounded-lg" />
+            )}
           </h1>
           <p className="text-sm text-zinc-400 mt-1.5 font-medium">
             Manage degree programs and certificates under this university.
@@ -226,10 +231,7 @@ export default function CoursesPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
-          <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-          <p className="text-sm font-medium">Loading courses...</p>
-        </div>
+        <SkeletonTable />
       ) : (uniError || coursesError) ? (
         <div className="flex flex-col items-center justify-center py-32 text-red-500">
           <p className="text-sm font-medium">Failed to load data.</p>

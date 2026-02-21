@@ -17,6 +17,7 @@ import Image from "next/image";
 import { fetchApi, swrFetcher } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { canEdit, canDelete, type Role } from "@/lib/rbac";
+import SkeletonTable from "@/components/admin/SkeletonTable";
 import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
@@ -269,44 +270,39 @@ export default function SubjectDetailsPage() {
   const labelClass =
     "block text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wide";
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-32 text-zinc-500">
-        <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500" />
-        <p className="text-sm font-medium">Loading subject details...</p>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto pb-20 animate-in fade-in duration-500">
       <Breadcrumb
         items={[
           { label: "Universities", href: "/admin/universities" },
           {
-            label: univName || "...",
+            label: univName || <div className="w-24 h-4 bg-zinc-800 animate-pulse rounded" />,
             href: `/admin/universities/${universityId}/courses`,
           },
           {
-            label: courseName || "...",
+            label: courseName || <div className="w-32 h-4 bg-zinc-800 animate-pulse rounded" />,
             href: `/admin/universities/${universityId}/courses/${courseId}/semesters`,
           },
           {
             label: `Sem ${semester}`,
             href: `/admin/universities/${universityId}/courses/${courseId}/semesters/${semester}/subjects`,
           },
-          { label: `${subjectCode} — ${subjectName}` },
+          { label: subjectName ? `${subjectCode} — ${subjectName}` : <div className="w-48 h-4 bg-zinc-800 animate-pulse rounded" /> },
         ]}
       />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            {subjectCode} — Chapters & Resources
+          <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+            {subjectName ? (
+              `${subjectCode} — Chapters & Resources`
+            ) : (
+              <div className="w-72 h-9 bg-zinc-800 animate-pulse rounded-lg" />
+            )}
           </h1>
           <p className="text-sm text-zinc-400 mt-1.5 font-medium">
-            {subjectName}
+            {subjectName || <span className="w-32 h-4 bg-zinc-800 animate-pulse rounded inline-block" />}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -329,8 +325,18 @@ export default function SubjectDetailsPage() {
         </div>
       </div>
 
-      {/* ===== CHAPTERS SECTION ===== */}
-      <div className="space-y-8">
+      {/* Content */}
+      {loading ? (
+        <div className="space-y-8">
+          <SkeletonTable />
+          <SkeletonTable />
+        </div>
+      ) : (chError || resError) ? (
+        <div className="flex flex-col items-center justify-center py-32 text-red-500">
+          <p className="text-sm font-medium">Failed to load data.</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
         <div>
           <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <Bookmark className="w-5 h-5 text-indigo-400" /> Syllabus Chapters
@@ -508,6 +514,7 @@ export default function SubjectDetailsPage() {
             ))}
           </DataTable>
         </div>
+      )}
       </div>
 
       {/* ===== DRAWER ===== */}
