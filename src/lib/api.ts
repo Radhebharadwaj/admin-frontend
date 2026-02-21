@@ -16,13 +16,24 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     headers.delete("Content-Type");
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  const data = await response.json();
-  return data;
+    // Attempt to parse JSON safely
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const data = await response.json();
+      return data;
+    } else {
+      return { success: false, message: `Server returned non-JSON response (${response.status})` };
+    }
+  } catch (error: any) {
+    console.error("API Fetch Error:", error);
+    return { success: false, message: error.message || "Network Error" };
+  }
 }
 
 export async function getDashboardStats() {
