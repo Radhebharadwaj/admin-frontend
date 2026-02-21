@@ -514,6 +514,7 @@ export default function SubjectDetailsPage() {
             ))}
           </DataTable>
         </div>
+        </div>
       )}
       </div>
 
