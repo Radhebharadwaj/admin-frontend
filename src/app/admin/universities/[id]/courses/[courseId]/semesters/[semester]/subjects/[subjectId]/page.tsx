@@ -252,18 +252,26 @@ export default function SubjectDetailsPage() {
     setFormLoading(false);
   };
 
-  // Group chapters by unit_name
+  // Group chapters by unit_name (normalized to prevent duplicates)
   const groupedChapters = chapters.reduce<
     { unitName: string | null; items: Chapter[] }[]
   >((acc, ch) => {
-    const existing = acc.find((g) => g.unitName === ch.unit_name);
+    const rawUnit = ch.unit_name || null;
+    const normalizedUnit = rawUnit ? rawUnit.trim().toUpperCase() : null;
+    
+    const existing = acc.find((g) => g.unitName === normalizedUnit);
     if (existing) {
       existing.items.push(ch);
     } else {
-      acc.push({ unitName: ch.unit_name, items: [ch] });
+      acc.push({ unitName: normalizedUnit, items: [ch] });
     }
     return acc;
-  }, []);
+  }, []).sort((a, b) => {
+    // Put chapters without a unit at the top
+    if (a.unitName === null) return -1;
+    if (b.unitName === null) return 1;
+    return a.unitName.localeCompare(b.unitName);
+  });
 
   const inputClass =
     "w-full bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder-zinc-600";
