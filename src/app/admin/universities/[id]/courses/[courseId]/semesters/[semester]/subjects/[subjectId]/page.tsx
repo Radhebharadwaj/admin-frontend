@@ -11,6 +11,7 @@ import {
   Loader2,
   File,
   ExternalLink,
+  Lock,
 } from "lucide-react";
 import useSWR from "swr";
 import Image from "next/image";
@@ -22,6 +23,7 @@ import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import ImageUploader from "@/components/admin/ImageUploader";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 // ===== TYPES =====
 interface Chapter {
@@ -44,6 +46,9 @@ interface Resource {
   price_in_inr: number;
   is_public: number;
   is_active: number;
+  valid_from?: string | null;
+  free_after_date?: string | null;
+  submission_deadline?: string | null;
 }
 
 const CATEGORIES = [
@@ -86,6 +91,10 @@ export default function SubjectDetailsPage() {
   const [error, setError] = useState("");
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ type: string; id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // ===== Drawer Helpers =====
   const openChapterCreate = () => {
     setFormType("chapter");
@@ -113,6 +122,10 @@ export default function SubjectDetailsPage() {
       description: "",
       price_in_inr: "0",
       is_public: false,
+      is_free: false,
+      valid_from: "",
+      free_after_date: "",
+      submission_deadline: "",
     });
     setError("");
     setDrawerOpen(true);
@@ -124,13 +137,24 @@ export default function SubjectDetailsPage() {
       ...r,
       price_in_inr: String(r.price_in_inr || 0),
       is_public: r.is_public === 1,
+      is_free: (r.price_in_inr || 0) === 0,
+      valid_from: r.valid_from ? new Date(r.valid_from).toISOString().slice(0, 16) : "",
+      free_after_date: r.free_after_date ? new Date(r.free_after_date).toISOString().slice(0, 16) : "",
+      submission_deadline: r.submission_deadline ? new Date(r.submission_deadline).toISOString().slice(0, 16) : "",
     });
     setError("");
     setDrawerOpen(true);
   };
 
-  const handleDelete = async (type: string, id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This is permanent.`)) return;
+  const handleDelete = (type: string, id: string, name: string) => {
+    setItemToDelete({ type, id, name });
+    setDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!itemToDelete) return;
+    const { type, id } = itemToDelete;
+    setIsDeleting(true);
     try {
       if (type === "chapters") {
         await mutateChapters(
@@ -164,6 +188,10 @@ export default function SubjectDetailsPage() {
       addToast("success", "Deleted successfully.");
     } catch (err: any) {
       addToast("error", err.message || `Failed to delete ${type}.`);
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -212,12 +240,16 @@ export default function SubjectDetailsPage() {
         const payload: any = {
           ...formData,
           chapter_id: formData.chapter_id || null,
-          price_in_inr: parseInt(formData.price_in_inr || "0"),
+          price_in_inr: formData.is_free ? 0 : parseInt(formData.price_in_inr || "0"),
           is_public: formData.is_public ? 1 : 0,
           external_url: formData.external_url || null,
           thumbnail_url: formData.thumbnail_url || null,
           description: formData.description || null,
+          valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
+          free_after_date: formData.free_after_date ? new Date(formData.free_after_date).toISOString() : null,
+          submission_deadline: formData.submission_deadline && (formData.category === "ASSIGNMENT" || formData.category === "PROJECT") ? new Date(formData.submission_deadline).toISOString() : null,
         };
+        delete payload.is_free;
         if (!editingId) payload.subject_id = subjectId;
 
         const optimisticData = editingId
@@ -737,39 +769,129 @@ export default function SubjectDetailsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>Price (INR)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    className={inputClass}
-                    value={formData.price_in_inr || ""}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        price_in_inr: e.target.value,
-                      })
-                    }
-                    placeholder="₹ 0 for free"
-                  />
+              {/* Pricing & Access Rules Card */}
+              <div className="bg-zinc-900/50 border border-zinc-700/50 rounded-xl p-5 space-y-6">
+                <h4 className="text-sm font-bold text-white flex items-center gap-2 border-b border-zinc-800 pb-3">
+                  <Lock className="w-4 h-4 text-indigo-400" /> Pricing & Access Rules
+                </h4>
+
+                {/* Smart Pricing & Visibility */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClass}>Resource Type</label>
+                    <div className="flex gap-5 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-zinc-300 hover:text-white transition-colors">
+                        <input
+                          type="radio"
+                          name="pricing_type"
+                          value="free"
+                          checked={formData.is_free || false}
+                          onChange={() => setFormData({ ...formData, is_free: true, price_in_inr: "0" })}
+                          className="accent-indigo-500 w-4 h-4"
+                        />
+                        Free Resource
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-zinc-300 hover:text-white transition-colors">
+                        <input
+                          type="radio"
+                          name="pricing_type"
+                          value="paid"
+                          checked={!formData.is_free}
+                          onChange={() => setFormData({ ...formData, is_free: false })}
+                          className="accent-indigo-500 w-4 h-4"
+                        />
+                        Paid / Premium
+                      </label>
+                    </div>
+                  </div>
+
+                  {!formData.is_free && (
+                    <div className="animate-in fade-in zoom-in-95 duration-200">
+                      <label className={labelClass}>Price (INR)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        className={inputClass}
+                        value={formData.price_in_inr || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, price_in_inr: e.target.value })
+                        }
+                        placeholder="e.g. 49"
+                        required={!formData.is_free}
+                      />
+                    </div>
+                  )}
                 </div>
+
+                {/* Visibility Toggle */}
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-semibold text-zinc-400 mt-8 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      className="rounded bg-zinc-900 border-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-zinc-950 w-4 h-4"
-                      checked={formData.is_public || false}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          is_public: e.target.checked,
-                        })
-                      }
-                    />
-                    Is Public?
+                  <label className="flex items-center gap-3 cursor-pointer select-none group inline-flex">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={formData.is_public || false}
+                        onChange={(e) =>
+                          setFormData({ ...formData, is_public: e.target.checked })
+                        }
+                      />
+                      <div className={`block w-10 h-6 rounded-full transition-colors duration-300 ${formData.is_public ? 'bg-indigo-500' : 'bg-zinc-700'}`}></div>
+                      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${formData.is_public ? 'transform translate-x-4' : ''}`}></div>
+                    </div>
+                    <span className="text-sm font-semibold text-white group-hover:text-indigo-400 transition-colors">Public Visibility</span>
                   </label>
+                  <p className="text-xs font-medium text-zinc-500 mt-2">
+                    (If ON, unregistered students can see this exists for SEO. If OFF, only enrolled students see it)
+                  </p>
                 </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-3 border-t border-zinc-800/50">
+                  <div>
+                    <label className={labelClass}>Valid From (Optional)</label>
+                    <input
+                      type="datetime-local"
+                      className={`${inputClass} [color-scheme:dark]`}
+                      value={formData.valid_from || ""}
+                      onChange={(e) => setFormData({ ...formData, valid_from: e.target.value })}
+                    />
+                    <p className="text-xs font-medium text-zinc-500 mt-2">
+                      (When should this resource become visible/unlocked? Leave empty to publish immediately)
+                    </p>
+                  </div>
+
+                  {!formData.is_free && (
+                    <div className="animate-in fade-in duration-300">
+                      <label className={labelClass}>Make Free After (Optional)</label>
+                      <input
+                        type="datetime-local"
+                        className={`${inputClass} [color-scheme:dark]`}
+                        value={formData.free_after_date || ""}
+                        onChange={(e) => setFormData({ ...formData, free_after_date: e.target.value })}
+                      />
+                      <p className="text-xs font-medium text-zinc-500 mt-2">
+                        (Use this if a paid module should automatically become free after a certain date/exam)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submission Deadline for Assignments/Projects */}
+                {(formData.category === "ASSIGNMENT" || formData.category === "PROJECT") && (
+                  <div className="pt-3 border-t border-zinc-800/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className={labelClass}>Submission Deadline</label>
+                    <input
+                      type="datetime-local"
+                      className={`${inputClass} [color-scheme:dark]`}
+                      value={formData.submission_deadline || ""}
+                      onChange={(e) => setFormData({ ...formData, submission_deadline: e.target.value })}
+                      required
+                    />
+                    <p className="text-xs font-medium text-zinc-500 mt-2">
+                      (Set the final date for students to submit this assignment)
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -796,6 +918,14 @@ export default function SubjectDetailsPage() {
           </div>
         </form>
       </SlideOverDrawer>
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={executeDelete}
+        itemName={itemToDelete?.name || ""}
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

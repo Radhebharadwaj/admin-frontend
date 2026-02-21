@@ -20,6 +20,7 @@ import Breadcrumb from "@/components/admin/Breadcrumb";
 import DataTable from "@/components/admin/DataTable";
 import SlideOverDrawer from "@/components/admin/SlideOverDrawer";
 import SkeletonTable from "@/components/admin/SkeletonTable";
+import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 
 // ===== TYPES =====
 interface Subject {
@@ -55,6 +56,10 @@ export default function SubjectsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // ===== CRUD =====
   const openCreate = () => {
     setEditingId(null);
@@ -70,22 +75,23 @@ export default function SubjectsPage() {
     setDrawerOpen(true);
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (
-      !confirm(
-        `Delete "${name}"? This will cascade-delete all chapters and resources.`
-      )
-    )
-      return;
+  const handleDelete = (id: string, name: string) => {
+    setItemToDelete({ id, name });
+    setDeleteModalOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
     try {
       await mutate(
         async () => {
-          const res = await fetchApi(`/api/subjects/${id}`, { method: "DELETE" });
+          const res = await fetchApi(`/api/subjects/${itemToDelete.id}`, { method: "DELETE" });
           if (!res.success) throw new Error(res.message);
-          return subjects.filter((s) => s.id !== id);
+          return subjects.filter((s) => s.id !== itemToDelete.id);
         },
         {
-          optimisticData: subjects.filter((s) => s.id !== id),
+          optimisticData: subjects.filter((s) => s.id !== itemToDelete.id),
           rollbackOnError: true,
           populateCache: true,
           revalidate: false,
@@ -94,6 +100,10 @@ export default function SubjectsPage() {
       addToast("success", "Subject deleted successfully.");
     } catch (err: any) {
       addToast("error", err.message || "Failed to delete subject.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -338,6 +348,15 @@ export default function SubjectsPage() {
           </div>
         </form>
       </SlideOverDrawer>
+
+      <ConfirmDeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={executeDelete}
+        itemName={itemToDelete?.name || ""}
+        isLoading={isDeleting}
+        customMessage="This will cascade-delete all chapters and resources."
+      />
     </div>
   );
 }
