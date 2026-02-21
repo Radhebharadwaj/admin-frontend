@@ -57,7 +57,7 @@ export default function AdminClient() {
           <p className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">₹{stats.totalSales}</p>
         </div>
       </div>
-      
+
       <div className="mt-12">
         <DataEntryForm dropdownData={dropdownData} />
       </div>
