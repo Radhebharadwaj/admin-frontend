@@ -587,6 +587,7 @@ export default function SubjectDetailsPage() {
                 </label>
                 <input
                   type="text"
+                  list="unit-names"
                   className={inputClass}
                   value={formData.unit_name || ""}
                   onChange={(e) =>
@@ -594,9 +595,13 @@ export default function SubjectDetailsPage() {
                   }
                   placeholder="Block 1"
                 />
+                <datalist id="unit-names">
+                  {Array.from(new Set(chapters.map((c) => c.unit_name).filter(Boolean))).map((u) => (
+                    <option key={u} value={u!} />
+                  ))}
+                </datalist>
                 <p className="text-xs text-zinc-600 mt-1.5">
-                  If provided, chapters will be grouped under this unit in the
-                  UI.
+                  Type a new unit or select an existing one to group chapters.
                 </p>
               </div>
             </>
@@ -648,21 +653,45 @@ export default function SubjectDetailsPage() {
               </div>
 
               <div>
-                <label className={labelClass}>Link to Chapter</label>
-                <select
-                  className={inputClass}
-                  value={formData.chapter_id || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, chapter_id: e.target.value })
-                  }
-                >
-                  <option value="">— Subject Level (No Chapter) —</option>
-                  {chapters.map((ch) => (
-                    <option key={ch.id} value={ch.id}>
-                      CH {ch.chapter_number}: {ch.title}
-                    </option>
-                  ))}
-                </select>
+                <label className={labelClass}>Resource Level</label>
+                <div className="flex gap-4 mb-3">
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="resource_level"
+                      checked={!formData.chapter_id}
+                      onChange={() => setFormData({ ...formData, chapter_id: "" })}
+                      className="text-indigo-600 bg-zinc-900 border-zinc-700"
+                    />
+                    Entire Subject (e.g. Full Book)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="resource_level"
+                      checked={!!formData.chapter_id}
+                      onChange={() => setFormData({ ...formData, chapter_id: chapters[0]?.id || "" })}
+                      className="text-indigo-600 bg-zinc-900 border-zinc-700"
+                    />
+                    Specific Chapter
+                  </label>
+                </div>
+                
+                {formData.chapter_id !== undefined && formData.chapter_id !== "" && (
+                  <select
+                    className={inputClass}
+                    value={formData.chapter_id || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, chapter_id: e.target.value })
+                    }
+                  >
+                    {chapters.map((ch) => (
+                      <option key={ch.id} value={ch.id}>
+                        CH {ch.chapter_number}: {ch.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
