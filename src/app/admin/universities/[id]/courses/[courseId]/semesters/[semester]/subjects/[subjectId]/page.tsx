@@ -540,7 +540,7 @@ export default function SubjectDetailsPage() {
                                           <div key={r.id} className="flex flex-col bg-zinc-950/50 border border-zinc-800 rounded-xl overflow-hidden group/card hover:border-zinc-700 transition-colors">
                                             {r.thumbnail_url ? (
                                               <div className="w-full h-32 relative bg-zinc-900 border-b border-zinc-800">
-                                                <Image src={r.thumbnail_url} alt={r.title} fill className="object-cover" />
+                                                <Image src={r.thumbnail_url.startsWith('http') ? r.thumbnail_url : `${process.env.NEXT_PUBLIC_R2_URL}/${r.thumbnail_url}`} alt={r.title} fill className="object-cover" />
                                               </div>
                                             ) : (
                                               <div className="w-full h-32 flex items-center justify-center bg-zinc-900 border-b border-zinc-800 text-zinc-700">
