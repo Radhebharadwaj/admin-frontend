@@ -316,3 +316,4 @@ export default function SubjectsPage() {
     </div>
   );
 }
+
