@@ -25,7 +25,8 @@ import ImageUploader from "@/components/admin/ImageUploader";
 import ConfirmDeleteModal from "@/components/admin/ConfirmDeleteModal";
 import TagInput from "@/components/ui/TagInput";
 
-import { saveUniversityAction, deleteUniversityAction, UniversitySchema } from "./actions";
+import { saveUniversityAction, deleteUniversityAction } from "./actions";
+import type { UniversitySchema } from "./schema";
 
 // Match the old frontend type structure + the new Zod schema needs
 export interface University {
