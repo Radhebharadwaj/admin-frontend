@@ -14,7 +14,7 @@ export async function saveUniversityAction(data: UniversitySchema, token: string
   try {
     const isUpdate = !!data.id;
     const endpoint = isUpdate ? `/api/universities/${data.id}` : `/api/universities`;
-    const method = isUpdate ? "PUT" : "POST";
+    const method = isUpdate ? "PATCH" : "POST";
 
     const res = await fetch(`${API_URL}${endpoint}`, {
       method,
