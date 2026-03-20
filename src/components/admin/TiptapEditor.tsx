@@ -13,7 +13,8 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { marked } from 'marked'
 import toast from 'react-hot-toast'
-import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize, Video, FileUp, Palette, Table as TableIcon } from 'lucide-react'
+import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize, Video, FileUp, Palette, Table as TableIcon, LayoutTemplate } from 'lucide-react'
+import { MultiSolutionExtension } from './tiptap/MultiSolutionExtension'
 
 interface TiptapEditorProps {
   value: string
@@ -33,6 +34,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit,
+      MultiSolutionExtension,
       Placeholder.configure({
         placeholder: 'Start writing your module here...',
         emptyEditorClass: 'is-editor-empty',
@@ -188,6 +190,17 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             title="Insert Table"
           >
             <TableIcon className="w-4 h-4" />
+          </button>
+
+          {/* Multi-Solution Block */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().insertContent({ type: 'multiSolutionBlock' }).run()}
+            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded-lg transition-colors text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
+            title="Add Multi-Solution Block"
+          >
+            <LayoutTemplate className="w-3.5 h-3.5" />
+            + Solution Block
           </button>
 
           {/* Color Picker */}

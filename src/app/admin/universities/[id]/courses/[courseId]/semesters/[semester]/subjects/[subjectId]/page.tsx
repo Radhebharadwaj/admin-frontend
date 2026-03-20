@@ -74,6 +74,8 @@ const CATEGORIES = [
   { value: "SOLUTION", label: "Solution" },
   { value: "VIDEO_LECTURE", label: "Video Lecture" },
   { value: "EBOOK_MODULE", label: "eBook Module" },
+  { value: "SYLLABUS", label: "Syllabus" },
+  { value: "REFERENCE_BOOK", label: "Reference Book" },
 ];
 
 function ResourceImage({ resource }: { resource: any }) {
@@ -99,6 +101,45 @@ function ResourceImage({ resource }: { resource: any }) {
       className="w-full h-40 object-cover rounded-t-md border-b border-zinc-800" 
       onError={() => setHasError(true)} 
     />
+  );
+}
+
+function CategorySelect({ value, onChange, options, className }: { value: string; onChange: (v: string) => void; options: { value: string, label: string }[]; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find(o => o.value === value)?.label || "Select Category";
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`${className} flex items-center justify-between text-left`}
+      >
+        <span>{selectedLabel}</span>
+        <svg className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+      
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl shadow-lg overflow-hidden py-1">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-zinc-800 ${value === opt.value ? 'bg-zinc-800 text-zinc-200 font-medium' : 'text-zinc-400 hover:text-zinc-200'}`}
+                onClick={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -289,11 +330,13 @@ export default function SubjectDetailsPage() {
       if (formType === "chapter") {
         const url = editingId ? `/api/chapters/${editingId}` : "/api/chapters";
         const payload: any = {
-          ...formData,
-          chapter_number: parseInt(formData.chapter_number),
-          unit_name: formData.unit_name ? formData.unit_name.trim() : null,
+          subject_id: editingId ? undefined : subjectId,
+          unit_number: formData.unit_number ? parseInt(String(formData.unit_number)) : null,
+          chapter_number: parseInt(String(formData.chapter_number)),
+          title: String(formData.title || ""),
+          unit_name: formData.unit_name ? String(formData.unit_name).trim() : null,
+          is_active: formData.is_active ? 1 : 0,
         };
-        if (!editingId) payload.subject_id = subjectId;
 
         const optimisticData = editingId
           ? chapters.map((c) => (c.id === editingId ? { ...c, ...payload } : c))
@@ -324,22 +367,24 @@ export default function SubjectDetailsPage() {
           ? `/api/resources/${editingId}`
           : "/api/resources";
         const payload: any = {
-          ...formData,
-          chapter_id: formData.chapter_id || null,
-          price_in_inr: formData.is_free ? 0 : parseInt(formData.price_in_inr || "0"),
+          subject_id: editingId ? undefined : subjectId,
+          chapter_id: formData.chapter_id ? String(formData.chapter_id) : null,
+          title: String(formData.title || ""),
+          category: String(formData.category || "ASSIGNMENT"),
+          price_in_inr: formData.is_free ? 0 : parseInt(String(formData.price_in_inr || "0")),
           is_public: formData.is_public ? 1 : 0,
-          external_url: formData.content_type === "external_url" ? (formData.external_url || null) : null,
-          thumbnail_url: formData.thumbnail_url || null,
-          description: formData.description || null,
+          is_active: formData.is_active ? 1 : 0,
+          description: formData.description ? String(formData.description) : null,
+          thumbnail_url: formData.thumbnail_url ? String(formData.thumbnail_url) : null,
           valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
           free_after_date: formData.free_after_date ? new Date(formData.free_after_date).toISOString() : null,
           submission_deadline: formData.submission_deadline && (formData.category === "ASSIGNMENT" || formData.category === "PROJECT") ? new Date(formData.submission_deadline).toISOString() : null,
-          content_type: formData.content_type || "external_url",
-          r2_object_key: formData.content_type === "r2_upload" ? (formData.r2_object_key || null) : null,
-          rich_text_content: formData.content_type === "internal_module" ? (formData.rich_text_content || null) : null,
+          academic_year: formData.academic_year ? String(formData.academic_year) : null,
+          content_type: String(formData.content_type || "external_url"),
+          external_url: formData.content_type === "external_url" ? (formData.external_url ? String(formData.external_url) : null) : null,
+          r2_object_key: formData.content_type === "r2_upload" ? (formData.r2_object_key ? String(formData.r2_object_key) : null) : null,
+          rich_text_content: formData.content_type === "internal_module" ? (formData.rich_text_content ? String(formData.rich_text_content) : null) : null,
         };
-        delete payload.is_free;
-        if (!editingId) payload.subject_id = subjectId;
 
         const optimisticData = editingId
           ? resources.map((r) => (r.id === editingId ? { ...r, ...payload } : r))
@@ -870,19 +915,12 @@ export default function SubjectDetailsPage() {
 
               <div>
                 <label className={labelClass}>Category</label>
-                <select
+                <CategorySelect
                   className={inputClass}
                   value={formData.category || "ASSIGNMENT"}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, category: val })}
+                  options={CATEGORIES}
+                />
               </div>
 
               <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 flex flex-col gap-1">
