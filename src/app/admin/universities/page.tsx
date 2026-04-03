@@ -34,6 +34,7 @@ interface University {
   id: string;
   name: string;
   slug: string;
+  acronym?: string | null;
   website_url: string | null;
   logo_url: string | null;
   logo_file?: File | null;
@@ -295,8 +296,9 @@ export default function UniversitiesPage() {
                   <UniversityLogo src={u.logo_url} name={u.name} />
                   <div>
                     <Link href={`/admin/universities/${u.id}/courses`} className="font-semibold text-white text-sm hover:text-indigo-400 transition-colors" onClick={(e) => e.stopPropagation()}>
-                      {u.name}
+                      {u.acronym || u.name}
                     </Link>
+                    {u.acronym && <div className="text-[11px] text-zinc-400 mt-0.5 max-w-[200px] truncate">{u.name}</div>}
                     <div className="text-xs text-zinc-500 font-mono mt-0.5">{u.slug}</div>
                   </div>
                 </div>
@@ -383,6 +385,20 @@ export default function UniversitiesPage() {
             label="University Logo"
             placeholder="Drag and drop logo or click to upload"
           />
+
+          {/* Acronym */}
+          <div>
+            <label className={labelClass}>UNIVERSITY ACRONYM (Short Name)</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="e.g., IGNOU"
+              value={formData.acronym || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, acronym: e.target.value })
+              }
+            />
+          </div>
 
           {/* Name */}
           <div>
