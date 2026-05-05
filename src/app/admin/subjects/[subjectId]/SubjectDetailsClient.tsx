@@ -431,7 +431,7 @@ export default function SubjectDetailsClient({
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm font-mono text-zinc-400">
-                  {r.price_in_inr > 0 ? `₹${(r.price_in_inr / 100).toFixed(2)}` : "Free"}
+                  {r.price_in_inr > 0 ? `₹${r.price_in_inr}` : "Free"}
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge active={r.is_active === 1} />

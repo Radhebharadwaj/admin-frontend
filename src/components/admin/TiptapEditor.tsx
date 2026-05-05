@@ -376,11 +376,20 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           />
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
+          {isFullScreen && (
+            <button
+              type="button"
+              onClick={toggleFullScreen}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg transition-all text-sm font-bold bg-emerald-500 text-white hover:bg-emerald-600 shadow-md shadow-emerald-500/20"
+            >
+              Done Editing
+            </button>
+          )}
           <button
             type="button"
             onClick={toggleFullScreen}
-            className={`p-2 rounded-lg transition-colors ${isFullScreen ? 'bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500/30' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
+            className={`p-2 rounded-lg transition-colors ${isFullScreen ? 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'}`}
             title={isFullScreen ? "Exit Full Screen" : "Full Screen Mode"}
           >
             {isFullScreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
