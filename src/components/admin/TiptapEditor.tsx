@@ -17,7 +17,7 @@ import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize
 import { MultiSolutionExtension } from './tiptap/MultiSolutionExtension'
 import { CalloutExtension } from './tiptap/CalloutExtension'
 import { CustomVideoExtension } from './tiptap/CustomVideoExtension'
-import Image from '@tiptap/extension-image'
+import { CustomImageExtension } from './tiptap/CustomImageExtension'
 import Dropcursor from '@tiptap/extension-dropcursor'
 import { Markdown } from 'tiptap-markdown'
 
@@ -89,7 +89,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
       }),
       CalloutExtension,
       CustomVideoExtension,
-      Image.configure({
+      CustomImageExtension.configure({
         inline: false,
         HTMLAttributes: {
           class: 'rounded-xl border border-zinc-800 my-4 max-w-full',
