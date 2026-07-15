@@ -159,24 +159,28 @@ export default function UniversitiesClient({ universities }: { universities: Uni
         finalLogoUrl = null;
       }
 
-      // Intercept and format the payload strictly into plain JSON
-      let parsedAliases = formData.search_aliases;
-      if (Array.isArray(parsedAliases)) {
-        parsedAliases = parsedAliases.join(", ");
-      }
-
-      const payload: UniversitySchema = {
+      // 1. Manually extract and sanitize ONLY the required primitive fields.
+      const safePayload: UniversitySchema = {
         id: editingId || undefined,
-        name: formData.name || "",
-        slug: formData.slug || "",
-        acronym: formData.acronym || null,
-        website_url: formData.website_url || null,
-        logo_url: typeof finalLogoUrl === "string" ? finalLogoUrl : null,
-        search_aliases: typeof parsedAliases === "string" ? parsedAliases : null,
-        is_active: formData.is_active ? 1 : 0, // Convert boolean/truthy to integer
+        name: String(formData.name || ""),
+        acronym: String(formData.acronym || ""),
+        slug: String(formData.slug || ""),
+        website_url: String(formData.website_url || ""),
+        
+        // 2. Force strictly 1 or 0 for database compatibility
+        is_active: formData.is_active ? 1 : 0, 
+        
+        // 3. Safely handle array of tags to a single string
+        search_aliases: Array.isArray(formData.search_aliases) 
+          ? formData.search_aliases.map((t: any) => t.text || t).join(", ") 
+          : String(formData.search_aliases || ""),
+          
+        // 4. CRITICAL: Prevent File objects from leaking. Only allow strings.
+        logo_url: typeof finalLogoUrl === 'string' ? finalLogoUrl : "",
       };
 
-      const res = await saveUniversityAction(payload, sessionToken);
+      // 5. Call the Server Action with the strictly sanitized object
+      const res = await saveUniversityAction(safePayload, sessionToken);
       
       if (res.success) {
         addToast("success", res.message);
