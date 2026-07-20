@@ -55,7 +55,7 @@ interface Resource {
   external_url: string | null;
   thumbnail_url: string | null;
   description: string | null;
-  price_in_inr: number;
+  price_in_paise: number;
   is_public: number;
   is_active: number;
   valid_from?: string | null;
@@ -241,7 +241,7 @@ export default function SubjectDetailsPage() {
       external_url: "",
       thumbnail_url: null,
       description: "",
-      price_in_inr: "0",
+      price_in_paise: "0",
       is_public: false,
       is_free: false,
       valid_from: "",
@@ -259,9 +259,9 @@ export default function SubjectDetailsPage() {
     setEditingId(r.id);
     setFormData({
       ...r,
-      price_in_inr: String(r.price_in_inr || 0),
+      price_in_paise: String(r.price_in_paise || 0),
       is_public: r.is_public === 1,
-      is_free: (r.price_in_inr || 0) === 0,
+      is_free: (r.price_in_paise || 0) === 0,
       valid_from: r.valid_from ? new Date(r.valid_from).toISOString().slice(0, 16) : "",
       free_after_date: r.free_after_date ? new Date(r.free_after_date).toISOString().slice(0, 16) : "",
       submission_deadline: r.submission_deadline ? new Date(r.submission_deadline).toISOString().slice(0, 16) : "",
@@ -371,7 +371,7 @@ export default function SubjectDetailsPage() {
           chapter_id: formData.chapter_id ? String(formData.chapter_id) : null,
           title: String(formData.title || ""),
           category: String(formData.category || "ASSIGNMENT"),
-          price_in_inr: formData.is_free ? 0 : parseInt(String(formData.price_in_inr || "0")),
+          price_in_paise: formData.is_free ? 0 : parseInt(String(formData.price_in_paise || "0")),
           is_public: formData.is_public ? 1 : 0,
           is_active: formData.is_active ? 1 : 0,
           description: formData.description ? String(formData.description) : null,
@@ -750,8 +750,8 @@ export default function SubjectDetailsPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm font-medium">
-                  {r.price_in_inr > 0 ? (
-                    <span className="text-emerald-400">₹{r.price_in_inr}</span>
+                  {r.price_in_paise > 0 ? (
+                    <span className="text-emerald-400">₹{(r.price_in_paise / 100).toFixed(0)}</span>
                   ) : (
                     <span className="text-zinc-500">FREE</span>
                   )}
@@ -1086,7 +1086,7 @@ export default function SubjectDetailsPage() {
                           name="pricing_type"
                           value="free"
                           checked={formData.is_free || false}
-                          onChange={() => setFormData({ ...formData, is_free: true, price_in_inr: "0" })}
+                          onChange={() => setFormData({ ...formData, is_free: true, price_in_paise: "0" })}
                           className="accent-indigo-500 w-4 h-4"
                         />
                         Free Resource
@@ -1112,9 +1112,9 @@ export default function SubjectDetailsPage() {
                         type="number"
                         min="0"
                         className={inputClass}
-                        value={formData.price_in_inr || ""}
+                        value={formData.price_in_paise || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, price_in_inr: e.target.value })
+                          setFormData({ ...formData, price_in_paise: e.target.value })
                         }
                         placeholder="e.g. 49"
                         required={!formData.is_free}

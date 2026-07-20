@@ -21,7 +21,7 @@ interface Resource {
   category: string;
   title: string;
   is_public: number;
-  price_in_inr: number;
+  price_in_paise: number;
   thumbnail_url: string | null;
   content_type?: string;
 }
@@ -89,7 +89,7 @@ export default function SubjectCatalogPage() {
   };
 
   const ResourceCard = ({ r }: { r: Resource }) => {
-    const isPaid = r.price_in_inr > 0;
+    const isPaid = r.price_in_paise > 0;
     
     return (
       <Link href={`/read/${r.id}`} className="block group">
@@ -121,7 +121,7 @@ export default function SubjectCatalogPage() {
               {isPaid ? (
                 <div className="bg-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
                   <Lock className="w-3 h-3" />
-                  ₹{r.price_in_inr}
+                  ₹{(r.price_in_paise / 100).toFixed(0)}
                 </div>
               ) : (
                 <div className="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">

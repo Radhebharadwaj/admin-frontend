@@ -17,7 +17,7 @@ interface Resource {
   category: string;
   title: string;
   is_public: number;
-  price_in_inr: number;
+  price_in_paise: number;
   content_type: string;
   r2_object_key: string | null;
   external_url: string | null;
@@ -210,7 +210,7 @@ export default function UniversalReaderPage() {
               disabled={isProcessing}
               className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-lg hover:shadow-indigo-500/25 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Unlock for ₹{resource.price_in_inr}</span>}
+              {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Unlock for ₹{(resource.price_in_paise / 100).toFixed(0)}</span>}
             </button>
             
             <p className="text-xs text-zinc-500 mt-4 flex items-center justify-center gap-1">

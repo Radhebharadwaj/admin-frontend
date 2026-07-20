@@ -12,6 +12,8 @@ import {
   Video,
   File,
   ExternalLink,
+  ChevronDown,
+  Lock,
 } from "lucide-react";
 import useSWR from "swr";
 import { fetchApi, swrFetcher } from "@/lib/api";
@@ -34,6 +36,7 @@ interface Chapter {
   chapter_number: number;
   title: string;
   is_active: number;
+  price_in_paise: number;
 }
 
 interface MasterMaterial {
@@ -41,9 +44,15 @@ interface MasterMaterial {
   subject_id: string;
   title: string;
   category: string;
-  price_in_inr: number;
+  price_in_paise: number;
   r2_object_key: string | null;
   is_active: number;
+  is_public: number;
+  exam_type?: string | null;
+  exam_year?: number | null;
+  sequence_number?: number;
+  academic_year?: string | null;
+  free_after_date?: string | null;
   // View only fields
   thumbnail_url?: string | null;
   external_url?: string | null;
@@ -57,6 +66,8 @@ const VALID_CATEGORIES = [
   "SOLUTION",
   "VIDEO_LECTURE",
   "EBOOK_MODULE",
+  "SYLLABUS",
+  "REFERENCE_BOOK",
 ];
 
 export default function SubjectDetailsClient({
@@ -108,6 +119,7 @@ export default function SubjectDetailsClient({
   const [resourceForm, setResourceForm] = useState<Partial<MasterMaterial>>({ category: "PYQ" });
   const [resourceLoading, setResourceLoading] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -119,7 +131,7 @@ export default function SubjectDetailsClient({
   // ===== CHAPTER HANDLERS =====
   const openCreateChapter = () => {
     setEditingChapterId(null);
-    setChapterForm({ unit_number: 1, chapter_number: 1, title: "", is_active: 1 });
+    setChapterForm({ unit_number: 1, chapter_number: 1, title: "", is_active: 1, price_in_paise: 0 });
     setChapterDrawer(true);
   };
 
@@ -144,6 +156,7 @@ export default function SubjectDetailsClient({
         chapter_number: Number(chapterForm.chapter_number || 1),
         title: String(chapterForm.title || ""),
         is_active: chapterForm.is_active ? 1 : 0,
+        price_in_paise: Number(chapterForm.price_in_paise || 0),
       };
 
       const url = editingChapterId ? `/api/chapters/${editingChapterId}` : "/api/chapters";
@@ -182,8 +195,9 @@ export default function SubjectDetailsClient({
   // ===== RESOURCE HANDLERS =====
   const openCreateResource = () => {
     setEditingResourceId(null);
-    setResourceForm({ title: "", category: "PYQ", price_in_inr: 0, r2_object_key: "", is_active: 1 });
+    setResourceForm({ title: "", category: "PYQ", price_in_paise: 0, r2_object_key: "", is_active: 1, is_public: 0 });
     setFileToUpload(null);
+    setShowAdvanced(false);
     setResourceDrawer(true);
   };
 
@@ -223,9 +237,15 @@ export default function SubjectDetailsClient({
         subject_id: String(subjectId),
         title: String(resourceForm.title || ""),
         category: String(resourceForm.category || "PYQ"),
-        price_in_inr: Number(resourceForm.price_in_inr || 0),
+        price_in_paise: Number(resourceForm.price_in_paise || 0),
         r2_object_key: typeof finalKey === "string" ? finalKey : null,
         is_active: resourceForm.is_active ? 1 : 0,
+        is_public: resourceForm.is_public ? 1 : 0,
+        exam_type: resourceForm.exam_type || null,
+        exam_year: resourceForm.exam_year ? Number(resourceForm.exam_year) : null,
+        sequence_number: Number(resourceForm.sequence_number || 0),
+        academic_year: resourceForm.academic_year || null,
+        free_after_date: resourceForm.free_after_date || null,
       };
 
       const url = editingResourceId ? `/api/resources/${editingResourceId}` : "/api/resources";
@@ -431,7 +451,7 @@ export default function SubjectDetailsClient({
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm font-mono text-zinc-400">
-                  {r.price_in_inr > 0 ? `₹${r.price_in_inr}` : "Free"}
+                  {r.price_in_paise > 0 ? `₹${(r.price_in_paise / 100).toFixed(0)}` : "Free"}
                 </td>
                 <td className="px-6 py-4">
                   <StatusBadge active={r.is_active === 1} />
@@ -535,6 +555,51 @@ export default function SubjectDetailsClient({
             </button>
           </div>
 
+          {/* Pricing & Access */}
+          <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-xl space-y-4">
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-zinc-500" />
+              <p className="text-sm font-semibold text-zinc-200">Pricing & Access</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="chapter_pricing"
+                  checked={(chapterForm.price_in_paise || 0) === 0}
+                  onChange={() => setChapterForm({ ...chapterForm, price_in_paise: 0 })}
+                  className="accent-emerald-500"
+                />
+                <span className="text-sm text-zinc-300">Free</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="chapter_pricing"
+                  checked={(chapterForm.price_in_paise || 0) > 0}
+                  onChange={() => setChapterForm({ ...chapterForm, price_in_paise: chapterForm.price_in_paise || 4900 })}
+                  className="accent-indigo-500"
+                />
+                <span className="text-sm text-zinc-300">Paid / Premium</span>
+              </label>
+            </div>
+            {(chapterForm.price_in_paise || 0) > 0 && (
+              <div>
+                <label className={labelClass}>Price (INR)</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={(chapterForm.price_in_paise || 0) / 100}
+                  onChange={(e) => setChapterForm({ ...chapterForm, price_in_paise: Math.round(parseFloat(e.target.value || "0") * 100) })}
+                  placeholder="e.g. 49"
+                  min="0"
+                  step="1"
+                />
+                <p className="text-xs text-zinc-500 mt-1">Stored as {chapterForm.price_in_paise || 0} paise</p>
+              </div>
+            )}
+          </div>
+
           <div className="pt-6 mt-6 border-t border-zinc-800 flex justify-end gap-3">
             <button
               type="button"
@@ -590,14 +655,17 @@ export default function SubjectDetailsClient({
               </select>
             </div>
             <div>
-              <label className={labelClass}>Price (Paise)</label>
+              <label className={labelClass}>Price (INR)</label>
               <input
                 type="number"
                 className={inputClass}
-                value={resourceForm.price_in_inr || 0}
-                onChange={(e) => setResourceForm({ ...resourceForm, price_in_inr: parseInt(e.target.value) || 0 })}
+                value={(resourceForm.price_in_paise || 0) / 100}
+                onChange={(e) => setResourceForm({ ...resourceForm, price_in_paise: Math.round(parseFloat(e.target.value || "0") * 100) })}
                 placeholder="0 for Free"
+                min="0"
+                step="1"
               />
+              <p className="text-xs text-zinc-500 mt-1">Stored as {resourceForm.price_in_paise || 0} paise</p>
             </div>
           </div>
 
@@ -626,6 +694,89 @@ export default function SubjectDetailsClient({
               placeholder="e.g. subjects/math/pyq-2023.pdf"
             />
           </div>
+
+          {/* Advanced Settings Accordion */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all"
+          >
+            <span>Advanced Settings</span>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+          </button>
+          {showAdvanced && (
+            <div className="space-y-4 p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Exam Type</label>
+                  <select
+                    className={inputClass}
+                    value={resourceForm.exam_type || ""}
+                    onChange={(e) => setResourceForm({ ...resourceForm, exam_type: e.target.value || null })}
+                  >
+                    <option value="">None</option>
+                    <option value="MID_SEM">Mid Semester</option>
+                    <option value="END_SEM">End Semester</option>
+                    <option value="QUIZ">Quiz</option>
+                    <option value="VIVA">Viva</option>
+                    <option value="PRACTICAL">Practical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Exam Year</label>
+                  <input
+                    type="number"
+                    className={inputClass}
+                    value={resourceForm.exam_year || ""}
+                    onChange={(e) => setResourceForm({ ...resourceForm, exam_year: parseInt(e.target.value) || null })}
+                    placeholder="e.g. 2024"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Sequence Number</label>
+                  <input
+                    type="number"
+                    className={inputClass}
+                    value={resourceForm.sequence_number || 0}
+                    onChange={(e) => setResourceForm({ ...resourceForm, sequence_number: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Academic Year</label>
+                  <input
+                    type="text"
+                    className={inputClass}
+                    value={resourceForm.academic_year || ""}
+                    onChange={(e) => setResourceForm({ ...resourceForm, academic_year: e.target.value || null })}
+                    placeholder="e.g. 2024-25"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Make Free After Date</label>
+                <input
+                  type="datetime-local"
+                  className={inputClass}
+                  value={resourceForm.free_after_date || ""}
+                  onChange={(e) => setResourceForm({ ...resourceForm, free_after_date: e.target.value || null })}
+                />
+                <p className="text-xs text-zinc-500 mt-1">If this is a paid resource, it becomes free after this date.</p>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <p className="text-sm text-zinc-300">Public Visibility</p>
+                <button
+                  type="button"
+                  onClick={() => setResourceForm({ ...resourceForm, is_public: resourceForm.is_public === 1 ? 0 : 1 })}
+                  className={`relative w-12 h-7 rounded-full transition-colors ${resourceForm.is_public === 1 ? "bg-emerald-500" : "bg-zinc-700"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${resourceForm.is_public === 1 ? "translate-x-5" : "translate-x-0"}`} />
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between p-4 bg-zinc-950 border border-zinc-800 rounded-xl">
             <div>
