@@ -41,6 +41,7 @@ interface Course {
   duration_years: number | null;
   total_semesters: number;
   search_aliases?: string;
+  acronym?: string | null;
   is_active: number;
 }
 
@@ -273,8 +274,9 @@ export default function CoursesPage() {
                   </div>
                   <div>
                     <Link href={`/admin/universities/${universityId}/courses/${c.id}/semesters`} className="font-semibold text-white text-sm hover:text-indigo-400 transition-colors" onClick={(e) => e.stopPropagation()}>
-                      {c.name}
+                      {c.acronym || c.name}
                     </Link>
+                    {c.acronym && <div className="text-[11px] text-zinc-400 mt-0.5 max-w-[200px] truncate">{c.name}</div>}
                     <div className="text-xs text-zinc-500 font-mono mt-0.5">
                       {c.slug}
                     </div>
@@ -345,6 +347,20 @@ export default function CoursesPage() {
             </div>
           )}
 
+          {/* Acronym */}
+          <div>
+            <label className={labelClass}>COURSE ACRONYM (Short Name)</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="e.g. BCA, B.Tech"
+              value={formData.acronym || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, acronym: e.target.value })
+              }
+            />
+          </div>
+
           {/* Name */}
           <div>
             <label className={labelClass}>Course Name</label>
@@ -362,6 +378,9 @@ export default function CoursesPage() {
               placeholder="e.g. Bachelor of Computer Applications"
               required
             />
+            <p className="text-xs text-zinc-500 mt-1">
+              Enter the full extended name (e.g., Bachelor of Computer Applications)
+            </p>
           </div>
 
           {/* Slug */}
