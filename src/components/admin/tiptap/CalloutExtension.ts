@@ -7,6 +7,8 @@ export const CalloutExtension = Node.create({
   group: 'block',
   content: 'block+',
   defining: true,
+  selectable: true,
+  draggable: true,
 
   parseHTML() {
     return [

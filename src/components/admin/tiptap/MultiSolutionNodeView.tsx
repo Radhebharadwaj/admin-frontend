@@ -32,10 +32,10 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
   }
 
   return (
-    <NodeViewWrapper className="my-6">
+    <NodeViewWrapper className="group my-6">
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-sm" contentEditable={false}>
         {/* Header */}
-        <div className="bg-zinc-950/50 px-4 py-3 border-b border-zinc-800 flex items-center justify-between group">
+        <div className="bg-zinc-950/50 px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div 
               className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 p-1 rounded transition-colors" 

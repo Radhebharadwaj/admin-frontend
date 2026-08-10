@@ -6,6 +6,8 @@ export const MultiSolutionExtension = Node.create({
   name: 'multiSolutionBlock',
   group: 'block',
   atom: true,
+  selectable: true,
+  draggable: true,
 
   addAttributes() {
     return {

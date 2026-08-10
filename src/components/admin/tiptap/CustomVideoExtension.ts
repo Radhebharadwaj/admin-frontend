@@ -4,6 +4,8 @@ export const CustomVideoExtension = Node.create({
   name: 'customVideo',
   group: 'block',
   atom: true,
+  selectable: true,
+  draggable: true,
 
   addAttributes() {
     return {
