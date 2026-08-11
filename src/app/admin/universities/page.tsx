@@ -5,6 +5,8 @@ export const metadata = {
   title: "Universities | QuduHub Admin",
 };
 
+export const runtime = "edge";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
 
 export default async function UniversitiesPage() {
