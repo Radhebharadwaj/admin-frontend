@@ -159,15 +159,21 @@ export default function UniversitiesClient({ universities }: { universities: Uni
         finalLogoUrl = null;
       }
 
+      // Intercept and format the payload strictly into plain JSON
+      let parsedAliases = formData.search_aliases;
+      if (Array.isArray(parsedAliases)) {
+        parsedAliases = parsedAliases.join(", ");
+      }
+
       const payload: UniversitySchema = {
         id: editingId || undefined,
         name: formData.name || "",
         slug: formData.slug || "",
         acronym: formData.acronym || null,
         website_url: formData.website_url || null,
-        logo_url: finalLogoUrl || null,
-        search_aliases: formData.search_aliases || null,
-        is_active: formData.is_active ?? 1,
+        logo_url: typeof finalLogoUrl === "string" ? finalLogoUrl : null,
+        search_aliases: typeof parsedAliases === "string" ? parsedAliases : null,
+        is_active: formData.is_active ? 1 : 0, // Convert boolean/truthy to integer
       };
 
       const res = await saveUniversityAction(payload, sessionToken);
