@@ -360,7 +360,11 @@ export default function UniversitiesClient({ universities }: { universities: Uni
               placeholder="e.g., IGNOU"
               value={formData.acronym || ""}
               onChange={(e) =>
-                setFormData({ ...formData, acronym: e.target.value })
+                setFormData({
+                  ...formData,
+                  acronym: e.target.value,
+                  slug: editingId ? formData.slug : autoSlug(e.target.value),
+                })
               }
             />
           </div>
@@ -375,7 +379,6 @@ export default function UniversitiesClient({ universities }: { universities: Uni
                 setFormData({
                   ...formData,
                   name: e.target.value,
-                  slug: editingId ? formData.slug : autoSlug(e.target.value),
                 })
               }
               placeholder="e.g. Indira Gandhi National Open University"
