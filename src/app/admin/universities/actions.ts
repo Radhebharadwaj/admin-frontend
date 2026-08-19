@@ -1,23 +1,9 @@
 "use server";
 
-import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { universitySchema, type UniversitySchema } from "./schema";
 
-// Assuming we fetch the API since this is frontend
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://admin-backend.pixraglobal.workers.dev";
-
-export const universitySchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, "University name is required"),
-  slug: z.string().min(1, "Slug is required"),
-  acronym: z.string().nullable().optional(),
-  website_url: z.string().nullable().optional(),
-  logo_url: z.string().nullable().optional(),
-  search_aliases: z.string().nullable().optional(),
-  is_active: z.number().default(1),
-});
-
-export type UniversitySchema = z.infer<typeof universitySchema>;
 
 export async function saveUniversityAction(data: UniversitySchema, token: string) {
   const parsed = universitySchema.safeParse(data);
