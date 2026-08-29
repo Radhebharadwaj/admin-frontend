@@ -42,6 +42,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [videoUrl, setVideoUrl] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   
   // Track value changes externally (e.g., loading data)
   const [mounted, setMounted] = useState(false)
@@ -228,6 +229,26 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
     e.target.value = ''
   }
 
+  const handleImageClick = () => {
+    const url = window.prompt("Option A: Enter an external image URL.\n\nLeave blank and click OK for Option B (Upload local file):");
+    if (url === null) return; // User cancelled
+    
+    if (url.trim() !== '') {
+      editor.commands.setImage({ src: url.trim() });
+    } else {
+      imageInputRef.current?.click();
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    e.target.value = ''; // reset input
+    const url = await uploadMediaToR2(file);
+    editor.commands.setImage({ src: url });
+  }
+
   const addVideo = () => {
     if (videoUrl) {
       editor.commands.setYoutubeVideo({ src: videoUrl })
@@ -368,6 +389,23 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           </div>
 
           <div className="w-px h-4 bg-zinc-800 mx-1" />
+
+          {/* Image Upload */}
+          <button
+            type="button"
+            onClick={handleImageClick}
+            className="p-2 rounded-lg transition-colors text-zinc-400 hover:text-white hover:bg-zinc-800"
+            title="Insert Image"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
+          <input
+            type="file"
+            accept="image/*"
+            ref={imageInputRef}
+            onChange={handleImageUpload}
+            className="hidden"
+          />
 
           {/* YouTube Video */}
           <button
