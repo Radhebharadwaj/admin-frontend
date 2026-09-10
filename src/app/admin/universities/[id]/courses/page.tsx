@@ -356,7 +356,11 @@ export default function CoursesPage() {
               placeholder="e.g. BCA, B.Tech"
               value={formData.acronym || ""}
               onChange={(e) =>
-                setFormData({ ...formData, acronym: e.target.value })
+                setFormData({ 
+                  ...formData, 
+                  acronym: e.target.value,
+                  slug: editingId ? formData.slug : autoSlug(e.target.value)
+                })
               }
             />
           </div>
@@ -372,7 +376,6 @@ export default function CoursesPage() {
                 setFormData({
                   ...formData,
                   name: e.target.value,
-                  slug: editingId ? formData.slug : autoSlug(e.target.value),
                 })
               }
               placeholder="e.g. Bachelor of Computer Applications"
