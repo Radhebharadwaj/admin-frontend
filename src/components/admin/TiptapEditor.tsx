@@ -6,7 +6,7 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
-import Youtube from '@tiptap/extension-youtube'
+import { CustomYoutubeExtension } from './tiptap/CustomYoutubeExtension'
 import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
@@ -64,7 +64,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
       }),
       TextStyle,
       Color,
-      Youtube.configure({
+      CustomYoutubeExtension.configure({
         inline: false,
         HTMLAttributes: {
           class: 'w-full aspect-video rounded-lg overflow-hidden border border-zinc-800 my-4',
