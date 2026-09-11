@@ -88,7 +88,7 @@ function ResourceImage({ resource }: { resource: any }) {
 
   if (!resource.thumbnail_url || hasError) {
     return (
-      <div className="w-full h-40 bg-zinc-900 flex items-center justify-center text-zinc-500 rounded-t-md border-b border-zinc-800">
+      <div className="w-full aspect-video bg-zinc-900 flex items-center justify-center text-zinc-500 border-b border-zinc-800">
         <ImageIcon size={32} />
       </div>
     );
@@ -98,7 +98,7 @@ function ResourceImage({ resource }: { resource: any }) {
     <img 
       src={finalSrc} 
       alt={resource.title} 
-      className="w-full h-40 object-cover rounded-t-md border-b border-zinc-800" 
+      className="w-full aspect-video object-cover border-b border-zinc-800" 
       onError={() => setHasError(true)} 
     />
   );
@@ -369,6 +369,24 @@ export default function SubjectDetailsPage() {
         );
         addToast("success", "Saved successfully.");
       } else {
+        let finalThumbnailUrl = formData.thumbnail_url;
+        
+        if (typeof formData.thumbnail_url === 'object' && formData.thumbnail_url !== null) {
+          const uploadData = new FormData();
+          uploadData.append("file", formData.thumbnail_url as any as Blob);
+          uploadData.append("folder", "thumbnails");
+
+          const uploadRes = await fetchApi("/api/upload/document", {
+            method: "POST",
+            body: uploadData,
+          });
+
+          if (!uploadRes.success) {
+            throw new Error(uploadRes.message || "Failed to upload thumbnail.");
+          }
+          finalThumbnailUrl = uploadRes.data.url;
+        }
+
         const url = editingId
           ? `/api/resources/${editingId}`
           : "/api/resources";
@@ -381,7 +399,7 @@ export default function SubjectDetailsPage() {
           is_public: formData.is_public ? 1 : 0,
           is_active: formData.is_active ? 1 : 0,
           description: formData.description ? String(formData.description) : null,
-          thumbnail_url: formData.thumbnail_url ? String(formData.thumbnail_url) : null,
+          thumbnail_url: finalThumbnailUrl ? String(finalThumbnailUrl) : null,
           valid_from: formData.valid_from ? new Date(formData.valid_from).toISOString() : null,
           free_after_date: formData.free_after_date ? new Date(formData.free_after_date).toISOString() : null,
           submission_deadline: formData.submission_deadline && (formData.category === "ASSIGNMENT" || formData.category === "PROJECT") ? new Date(formData.submission_deadline).toISOString() : null,
@@ -718,17 +736,17 @@ export default function SubjectDetailsPage() {
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
                     {r.thumbnail_url ? (
-                      <div className="relative w-9 h-12 rounded-md overflow-hidden border border-zinc-700 shrink-0">
+                      <div className="relative w-16 aspect-video rounded-md overflow-hidden border border-zinc-700 shrink-0">
                         <Image
                           src={r.thumbnail_url}
                           alt={r.title}
                           fill
-                          sizes="36px"
+                          sizes="64px"
                           className="object-cover"
                         />
                       </div>
                     ) : (
-                      <div className="w-9 h-12 rounded-md bg-zinc-800/50 border border-zinc-700 flex items-center justify-center text-zinc-500">
+                      <div className="w-16 aspect-video rounded-md bg-zinc-800/50 border border-zinc-700 flex items-center justify-center text-zinc-500 shrink-0">
                         <FileText className="w-4 h-4" />
                       </div>
                     )}
@@ -897,9 +915,9 @@ export default function SubjectDetailsPage() {
             <>
               {/* Cover Image Upload */}
               <ImageUploader
-                value={formData.thumbnail_url || null}
+                value={typeof formData.thumbnail_url === 'string' ? formData.thumbnail_url : null}
                 onChange={(val) =>
-                  setFormData({ ...formData, thumbnail_url: val as string })
+                  setFormData({ ...formData, thumbnail_url: val as any })
                 }
                 label="Cover Image (Thumbnail)"
                 placeholder="Upload a cover image for this resource"
