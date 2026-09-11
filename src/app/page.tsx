@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import { supabase } from "@/lib/supabase";
 import { useAuthStore } from "@/lib/store";
 import { LogIn } from "lucide-react";
@@ -16,6 +17,7 @@ export default function LoginPage() {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        Cookies.set('admin-session', session.access_token, { expires: 7, secure: true, sameSite: 'Lax' });
         setSessionToken(session.access_token);
         router.push("/admin");
       }
@@ -25,6 +27,7 @@ export default function LoginPage() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
+        Cookies.set('admin-session', session.access_token, { expires: 7, secure: true, sameSite: 'Lax' });
         setSessionToken(session.access_token);
         router.push("/admin");
       }

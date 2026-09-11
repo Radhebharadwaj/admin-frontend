@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -19,7 +20,9 @@ interface AuthState {
   removeToast: (id: string) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
   sessionToken: null,
   user: null,
   setSessionToken: (token) => set({ sessionToken: token }),
@@ -35,4 +38,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   removeToast: (id) =>
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
-}))
+    }),
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({ sessionToken: state.sessionToken, user: state.user }),
+    }
+  )
+)

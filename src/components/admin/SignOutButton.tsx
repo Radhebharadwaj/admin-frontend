@@ -2,6 +2,7 @@
 
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 
 import { useAuthStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
@@ -17,6 +18,9 @@ export default function SignOutButton() {
     // Clear Zustand store
     setSessionToken(null);
     setUser(null);
+
+    // Clear Cookie
+    Cookies.remove("admin-session");
     
     // Redirect to home page
     router.push("/");

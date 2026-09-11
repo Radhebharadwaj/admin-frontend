@@ -25,15 +25,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { sessionToken, setSessionToken, user, setUser } = useAuthStore();
+  const { sessionToken, user, setUser } = useAuthStore();
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (!sessionToken) {
-      router.push("/");
-      return;
-    }
+    setIsMounted(true);
+  }, []);
 
-    if (!user) {
+  useEffect(() => {
+    if (!isMounted) return;
+
+    if (sessionToken && !user) {
       getAdminProfile()
         .then((res) => {
           if (res.success && res.data) {
@@ -49,7 +51,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     } else {
       setLoading(false);
     }
-  }, [sessionToken, user, setUser, router]);
+  }, [sessionToken, user, setUser, router, isMounted]);
+
+  if (!isMounted) return null;
 
   // Removed early return to ensure the shell never unmounts
 
