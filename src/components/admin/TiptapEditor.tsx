@@ -13,12 +13,28 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { marked } from 'marked'
 import toast from 'react-hot-toast'
-import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize, Video, FileUp, Palette, Table as TableIcon, LayoutTemplate } from 'lucide-react'
+import { Bold, Italic, Heading1, Heading2, List, ListOrdered, Maximize, Minimize, Video, FileUp, Palette, Table as TableIcon, LayoutTemplate, MessageSquare, Image as ImageIcon } from 'lucide-react'
 import { MultiSolutionExtension } from './tiptap/MultiSolutionExtension'
+import { CalloutExtension } from './tiptap/CalloutExtension'
+import { CustomVideoExtension } from './tiptap/CustomVideoExtension'
+import Image from '@tiptap/extension-image'
+import Dropcursor from '@tiptap/extension-dropcursor'
+import { Markdown } from 'tiptap-markdown'
+
+// Mock upload function (to be wired to API later)
+const uploadMediaToR2 = async (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    toast.loading('Uploading media...', { id: 'media-upload' })
+    setTimeout(() => {
+      toast.success('Media uploaded!', { id: 'media-upload' })
+      resolve(URL.createObjectURL(file))
+    }, 1500)
+  })
+}
 
 interface TiptapEditorProps {
-  value: string
-  onChange: (value: string) => void
+  value: any
+  onChange: (value: any) => void
 }
 
 export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
@@ -64,14 +80,87 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           class: 'border border-zinc-700 p-2',
         },
       }),
+      CalloutExtension,
+      CustomVideoExtension,
+      Image.configure({
+        inline: false,
+        HTMLAttributes: {
+          class: 'rounded-xl border border-zinc-800 my-4 max-w-full',
+        },
+      }),
+      Dropcursor.configure({
+        color: '#10b981', // emerald-500
+        width: 3,
+      }),
+      Markdown.configure({
+        html: true, 
+        transformPastedText: true,
+      }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(editor.getJSON())
     },
     editorProps: {
       attributes: {
         class: 'prose prose-invert max-w-none focus:outline-none min-h-[300px] h-full p-4 text-sm text-zinc-300',
+      },
+      handleDrop: (view, event, slice, moved) => {
+        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+          const file = event.dataTransfer.files[0];
+          if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            event.preventDefault();
+            uploadMediaToR2(file).then((url) => {
+              const { schema } = view.state;
+              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+              if (coordinates) {
+                const node = file.type.startsWith('image/') 
+                  ? schema.nodes.image.create({ src: url }) 
+                  : schema.nodes.customVideo.create({ src: url });
+                const transaction = view.state.tr.insert(coordinates.pos, node);
+                view.dispatch(transaction);
+              }
+            });
+            return true;
+          }
+        }
+        return false;
+      },
+      handlePaste: (view, event, slice) => {
+        if (event.clipboardData && event.clipboardData.files && event.clipboardData.files[0]) {
+          const file = event.clipboardData.files[0];
+          if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+            event.preventDefault();
+            uploadMediaToR2(file).then((url) => {
+              const { schema } = view.state;
+              const node = file.type.startsWith('image/') 
+                ? schema.nodes.image.create({ src: url }) 
+                : schema.nodes.customVideo.create({ src: url });
+              const transaction = view.state.tr.replaceSelectionWith(node);
+              view.dispatch(transaction);
+            });
+            return true;
+          }
+        }
+        
+        // Custom paste interceptor for ```solution blocks
+        const text = event.clipboardData?.getData('text/plain');
+        if (text && text.trim().startsWith('```solution') && text.trim().endsWith('```')) {
+          event.preventDefault();
+          const contentMatch = text.match(/```solution\n([\s\S]*?)```/);
+          const solutionContent = contentMatch ? contentMatch[1].trim() : '';
+          
+          const { schema } = view.state;
+          const node = schema.nodes.multiSolutionBlock.create({
+            question: "Pasted Solution",
+            solutions: [{ id: Date.now().toString(), author_type: "Official", content: solutionContent }]
+          });
+          const transaction = view.state.tr.replaceSelectionWith(node);
+          view.dispatch(transaction);
+          return true;
+        }
+        
+        return false;
       },
     },
   })
@@ -85,8 +174,10 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
     if (!file) return
 
     const isMarkdownOrText = file.name.endsWith('.md') || file.name.endsWith('.txt')
-    if (!isMarkdownOrText) {
-      toast.error('Invalid File Type: Please upload only Markdown (.md) or Text (.txt) files for the module.')
+    const isJson = file.name.endsWith('.json')
+
+    if (!isMarkdownOrText && !isJson) {
+      toast.error('Invalid File Type: Please upload only Markdown (.md/.txt) or JSON (.json) files.')
       e.target.value = ''
       return
     }
@@ -94,9 +185,22 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
     const reader = new FileReader()
     reader.onload = async (event) => {
       const text = event.target?.result as string
-      // parse markdown
-      const html = await marked.parse(text)
-      editor.commands.setContent(html)
+      if (isJson) {
+        try {
+          const jsonContent = JSON.parse(text)
+          editor.commands.setContent(jsonContent)
+          toast.success('JSON imported successfully')
+        } catch (err) {
+          toast.error('Invalid JSON file format')
+        }
+      } else {
+        // For Markdown, tiptap-markdown parses natively if we setContent with Markdown format, 
+        // but since we want to be safe, we can use marked for standard HTML rendering, or just feed it directly.
+        // tiptap-markdown intercepts setContent if we pass raw markdown string (depending on config).
+        // It's safer to use editor.commands.setContent(text) since we have Markdown extension installed.
+        editor.commands.setContent(text)
+        toast.success('Markdown imported successfully')
+      }
     }
     reader.readAsText(file)
     // reset input
@@ -127,9 +231,25 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
         ? "fixed inset-0 z-[9999] bg-zinc-950 w-full h-full flex flex-col p-4 md:p-10"
         : "border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950 flex flex-col"
     }>
-      {/* Header / Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-1 p-2 border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex flex-wrap items-center gap-1">
+          <input
+            type="file"
+            accept=".md,.txt,.json"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-semibold bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 mr-2"
+            title="Import File (.md, .json)"
+          >
+            <FileUp className="w-3.5 h-3.5" />
+            Import File
+          </button>
+          <div className="w-px h-4 bg-zinc-800 mx-1" />
           <button
             type="button"
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -201,6 +321,17 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
           >
             <LayoutTemplate className="w-3.5 h-3.5" />
             + Solution Block
+          </button>
+
+          {/* Callout Block */}
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().insertContent({ type: 'calloutBlock' }).run()}
+            className="flex items-center gap-1.5 px-3 py-1.5 ml-1 rounded-lg transition-colors text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/20"
+            title="Add Callout/Summary"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            Callout
           </button>
 
           {/* Color Picker */}
