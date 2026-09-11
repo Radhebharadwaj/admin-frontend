@@ -25,14 +25,23 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     if (response.status === 401) {
       if (typeof window !== "undefined") {
         import("react-hot-toast").then((module) => {
-          module.default.error("Session expired. Please log in again in a new tab.", {
-            duration: 10000,
+          module.default.error("Session expired. Redirecting to login...", {
+            duration: 4000,
             id: "session-expired",
           });
         });
+        import("js-cookie").then((module) => {
+          module.default.remove("admin-session");
+        });
+        useAuthStore.getState().setSessionToken(null);
+        useAuthStore.getState().setUser(null);
+        
+        // Wait briefly for the toast to be seen, then redirect
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
       }
-      // Return gracefully so the app doesn't crash or redirect
-      return { success: false, message: "Session expired. Please log in again in a new tab." };
+      return { success: false, message: "Session expired." };
     }
 
     // Attempt to parse JSON safely
