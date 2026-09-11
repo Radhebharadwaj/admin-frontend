@@ -244,7 +244,25 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
 
   const addVideo = () => {
     if (videoUrl) {
-      editor.commands.setYoutubeVideo({ src: videoUrl })
+      let finalUrl = videoUrl;
+      try {
+        // Handle standard watch?v= format
+        if (videoUrl.includes('youtube.com/watch')) {
+          const urlObj = new URL(videoUrl);
+          const videoId = urlObj.searchParams.get('v');
+          if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
+        } 
+        // Handle short youtu.be/ format
+        else if (videoUrl.includes('youtu.be/')) {
+          const urlObj = new URL(videoUrl);
+          const videoId = urlObj.pathname.slice(1);
+          if (videoId) finalUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+      } catch (e) {
+        console.error("Invalid URL formatting", e);
+      }
+
+      editor.commands.setYoutubeVideo({ src: finalUrl })
       setVideoUrl('')
       setShowVideoModal(false)
     }
