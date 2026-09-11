@@ -230,14 +230,7 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
   }
 
   const handleImageClick = () => {
-    const url = window.prompt("Option A: Enter an external image URL.\n\nLeave blank and click OK for Option B (Upload local file):");
-    if (url === null) return; // User cancelled
-    
-    if (url.trim() !== '') {
-      editor.commands.setImage({ src: url.trim() });
-    } else {
-      imageInputRef.current?.click();
-    }
+    imageInputRef.current?.click();
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
