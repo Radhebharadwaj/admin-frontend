@@ -23,16 +23,32 @@ import { Markdown } from 'tiptap-markdown'
 
 // Mock upload function (to be wired to API later)
 const uploadMediaToR2 = async (file: File): Promise<string> => {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve, reject) => {
     toast.loading('Uploading media...', { id: 'media-upload' })
-    setTimeout(() => {
-      toast.success('Media uploaded!', { id: 'media-upload' })
-      // TODO: Wire up real presigned URL fetch and R2 PUT request
-      // Returning a permanent placeholder URL so images survive page refreshes
-      // and aren't saved as temporary blob: URLs in the database.
-      const fileType = file.type.startsWith('video/') ? 'Mock+R2+Video' : 'Mock+R2+Image';
-      resolve(`https://placehold.co/600x400/27272a/71717a?text=${fileType}`)
-    }, 1500)
+    try {
+      const { fetchApi } = await import('@/lib/api');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('uploadType', file.type.startsWith('video/') ? 'document' : 'image');
+      formData.append('entityType', 'editor');
+      formData.append('universitySlug', 'tiptap');
+      formData.append('filePrefix', 'inline');
+
+      const res = await fetchApi('/api/upload/media', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.success && res.data?.url) {
+        toast.success('Media uploaded!', { id: 'media-upload' });
+        resolve(res.data.url);
+      } else {
+        throw new Error(res.message || 'Failed to upload');
+      }
+    } catch (error: any) {
+      toast.error(`Upload failed: ${error.message}`, { id: 'media-upload' });
+      reject(error);
+    }
   })
 }
 
