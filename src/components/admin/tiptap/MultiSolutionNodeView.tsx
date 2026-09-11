@@ -48,7 +48,8 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
               Multi-Solution Block
             </h3>
           </div>
-          <button 
+          <button
+            type="button"
             onClick={deleteNode}
             className="text-zinc-600 hover:text-red-400 p-1.5 rounded-lg hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
             title="Delete Block"
@@ -66,6 +67,11 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
             <textarea
               value={question}
               onChange={(e) => updateQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.stopPropagation();
+                }
+              }}
               placeholder="e.g. Write a python script to reverse a string..."
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-zinc-200 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-700 transition-all placeholder-zinc-600 min-h-[80px] resize-y"
             />
@@ -78,6 +84,7 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
                 Solutions ({solutions.length})
               </label>
               <button
+                type="button"
                 onClick={addSolution}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold rounded-lg transition-all active:scale-95"
               >
@@ -95,6 +102,7 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
                   <div key={sol.id} className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden relative group">
                     <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
+                        type="button"
                         onClick={() => removeSolution(sol.id)}
                         className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors"
                         title="Remove Solution"
@@ -122,6 +130,11 @@ export default function MultiSolutionNodeView({ node, updateAttributes, deleteNo
                       <textarea
                         value={sol.content}
                         onChange={(e) => updateSolutionContent(sol.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.stopPropagation();
+                          }
+                        }}
                         placeholder="Enter the solution content (HTML/Text)..."
                         className="w-full bg-transparent border-0 text-zinc-200 text-sm focus:outline-none focus:ring-0 p-0 min-h-[100px] resize-y placeholder-zinc-600"
                       />
