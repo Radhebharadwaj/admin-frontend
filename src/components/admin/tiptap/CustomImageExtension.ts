@@ -8,8 +8,14 @@ export const CustomImageExtension = Image.extend({
 
   addAttributes() {
     return {
-      ...this.parent?.(),
-      src: { default: null },
+      src: {
+        default: null,
+        parseHTML: element => element.getAttribute('src'),
+        renderHTML: attributes => {
+          if (!attributes.src) return {};
+          return { src: attributes.src };
+        },
+      },
       alt: { default: null },
       title: { default: null },
     }
