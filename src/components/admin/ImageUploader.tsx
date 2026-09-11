@@ -120,12 +120,10 @@ export default function ImageUploader({
       {displayUrl && !isUploading ? (
         <div className="relative group rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900/50">
           <div className="aspect-[16/9] w-full relative flex items-center justify-center bg-zinc-950/50">
-            <Image
+            <img
               src={displayUrl}
               alt="Preview"
-              fill
-              sizes="(max-width: 768px) 100vw, 400px"
-              className="object-contain p-4"
+              className="object-cover w-full h-full rounded-md"
             />
           </div>
           <button

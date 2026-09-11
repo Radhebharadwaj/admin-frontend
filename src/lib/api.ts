@@ -22,6 +22,19 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
       headers,
     });
 
+    if (response.status === 401) {
+      if (typeof window !== "undefined") {
+        import("react-hot-toast").then((module) => {
+          module.default.error("Session expired. Please log in again in a new tab.", {
+            duration: 10000,
+            id: "session-expired",
+          });
+        });
+      }
+      // Return gracefully so the app doesn't crash or redirect
+      return { success: false, message: "Session expired. Please log in again in a new tab." };
+    }
+
     // Attempt to parse JSON safely
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {

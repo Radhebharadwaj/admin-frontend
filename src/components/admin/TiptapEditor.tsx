@@ -438,12 +438,14 @@ export default function TiptapEditor({ value, onChange }: TiptapEditorProps) {
             />
             <div className="flex justify-end gap-3">
               <button 
+                type="button"
                 onClick={() => setShowVideoModal(false)}
                 className="px-4 py-2 rounded-lg font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 Cancel
               </button>
               <button 
+                type="button"
                 onClick={addVideo}
                 className="px-4 py-2 rounded-lg font-medium bg-white text-black hover:bg-zinc-200 transition-colors"
               >
