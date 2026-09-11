@@ -9,14 +9,7 @@ export const CustomYoutubeExtension = Youtube.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
-      src: {
-        default: null,
-        parseHTML: element => element.getAttribute('src'),
-        renderHTML: attributes => {
-          if (!attributes.src) return {};
-          return { src: attributes.src };
-        },
-      },
+      src: { default: null },
     }
   },
 

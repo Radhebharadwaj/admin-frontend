@@ -27,7 +27,11 @@ const uploadMediaToR2 = async (file: File): Promise<string> => {
     toast.loading('Uploading media...', { id: 'media-upload' })
     setTimeout(() => {
       toast.success('Media uploaded!', { id: 'media-upload' })
-      resolve(URL.createObjectURL(file))
+      // TODO: Wire up real presigned URL fetch and R2 PUT request
+      // Returning a permanent placeholder URL so images survive page refreshes
+      // and aren't saved as temporary blob: URLs in the database.
+      const fileType = file.type.startsWith('video/') ? 'Mock+R2+Video' : 'Mock+R2+Image';
+      resolve(`https://placehold.co/600x400/27272a/71717a?text=${fileType}`)
     }, 1500)
   })
 }

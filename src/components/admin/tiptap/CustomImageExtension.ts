@@ -9,22 +9,9 @@ export const CustomImageExtension = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
-      src: {
-        default: null,
-        parseHTML: element => element.getAttribute('src'),
-        renderHTML: attributes => {
-          if (!attributes.src) return {};
-          return { src: attributes.src };
-        },
-      },
-      alt: {
-        default: null,
-        parseHTML: element => element.getAttribute('alt'),
-        renderHTML: attributes => {
-          if (!attributes.alt) return {};
-          return { alt: attributes.alt };
-        },
-      },
+      src: { default: null },
+      alt: { default: null },
+      title: { default: null },
     }
   },
 

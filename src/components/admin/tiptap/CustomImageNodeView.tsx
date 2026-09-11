@@ -1,19 +1,23 @@
 import { NodeViewWrapper, NodeViewProps } from '@tiptap/react'
-import { Trash2, ExternalLink } from 'lucide-react'
+import { Trash2, ExternalLink, ImageOff } from 'lucide-react'
+import { useState } from 'react'
 
 export default function CustomImageNodeView({ node, deleteNode }: NodeViewProps) {
   const { src, alt } = node.attrs
+  const [hasError, setHasError] = useState(false)
 
   return (
     <NodeViewWrapper className="group relative my-4">
-      {!src ? (
-        <div className="w-full h-40 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-zinc-500">
-          Media URL missing
+      {!src || hasError ? (
+        <div className="w-full h-48 bg-zinc-900 border border-zinc-800 rounded-xl flex flex-col items-center justify-center text-zinc-500 gap-2">
+          <ImageOff className="w-8 h-8 text-zinc-600" />
+          <span className="text-sm">{!src ? "Media URL missing" : "Broken Image / Not Found"}</span>
         </div>
       ) : (
         <img
           src={src}
           alt={alt || ''}
+          onError={() => setHasError(true)}
           className="w-full rounded-xl border border-zinc-800 object-contain max-h-[500px]"
         />
       )}
