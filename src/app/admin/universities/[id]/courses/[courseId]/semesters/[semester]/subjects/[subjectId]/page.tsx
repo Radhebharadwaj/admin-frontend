@@ -153,11 +153,11 @@ export default function SubjectDetailsPage() {
   const role = (user?.role || "GUEST") as Role;
 
   // Data
-  const { data: uniData } = useSWR(`/api/universities/${universityId}`, swrFetcher);
-  const { data: courseData } = useSWR(`/api/courses/${courseId}`, swrFetcher);
-  const { data: subData } = useSWR(`/api/subjects/${subjectId}`, swrFetcher);
-  const { data: chapters = [], error: chError, mutate: mutateChapters } = useSWR<Chapter[]>(`/api/chapters?subject_id=${subjectId}`, swrFetcher);
-  const { data: resources = [], error: resError, isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(`/api/resources?subject_id=${subjectId}`, swrFetcher);
+  const { data: uniData } = useSWR(universityId ? `/api/universities/${universityId}` : null, swrFetcher);
+  const { data: courseData } = useSWR(courseId ? `/api/courses/${courseId}` : null, swrFetcher);
+  const { data: subData } = useSWR(subjectId ? `/api/subjects/${subjectId}` : null, swrFetcher);
+  const { data: chapters = [], error: chError, mutate: mutateChapters } = useSWR<Chapter[]>(subjectId ? `/api/chapters?subject_id=${subjectId}` : null, swrFetcher);
+  const { data: resources = [], error: resError, isLoading: loading, mutate: mutateResources } = useSWR<Resource[]>(subjectId ? `/api/resources?subject_id=${subjectId}` : null, swrFetcher);
 
   const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
   const [chapterCategoryFilters, setChapterCategoryFilters] = useState<Record<string, string>>({});
@@ -524,7 +524,11 @@ export default function SubjectDetailsPage() {
         </div>
       ) : (chError || resError) ? (
         <div className="flex flex-col items-center justify-center py-32 text-red-500">
-          <p className="text-sm font-medium">Failed to load data.</p>
+          <p className="text-sm font-medium">Failed to load data. Please check the console for details.</p>
+        </div>
+      ) : chapters.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 border border-dashed border-zinc-800 rounded-xl">
+          <p className="text-zinc-500 font-medium">No chapters found. Click "+ Add Chapter" to start.</p>
         </div>
       ) : (
         <div className="space-y-8">

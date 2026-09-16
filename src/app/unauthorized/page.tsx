@@ -1,7 +1,14 @@
-import Link from "next/link";
+"use client";
+
 import { ShieldAlert, ArrowRight } from "lucide-react";
+import { useAuthStore } from "@/lib/store";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase";
+import Cookies from "js-cookie";
 
 export default function UnauthorizedPage() {
+  const { setSessionToken, setUser } = useAuthStore();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
       <div className="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center shadow-2xl">
@@ -24,12 +31,34 @@ export default function UnauthorizedPage() {
             <ArrowRight className="w-4 h-4" />
           </Link>
           
-          <Link 
-            href="/"
-            className="block text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+          <button 
+            onClick={async () => {
+              try {
+                // 1. Officially kill the Supabase session
+                await supabase.auth.signOut();
+                
+                // 2. Nuke local/session storage just in case
+                setSessionToken(null);
+                setUser(null);
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // 3. Critically: Destroy the middleware cookie!
+                Cookies.remove('admin-session');
+                document.cookie = "admin-session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                // 4. Force redirect to the PUBLIC login page (root)
+                window.location.href = '/'; 
+              } catch (error) {
+                Cookies.remove('admin-session');
+                document.cookie = "admin-session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.href = '/'; 
+              }
+            }}
+            className="text-sm text-zinc-400 hover:text-white transition-colors mt-4 block text-center w-full"
           >
             Return to Admin Login
-          </Link>
+          </button>
         </div>
       </div>
     </div>
